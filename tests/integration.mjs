@@ -232,6 +232,7 @@ try {
   await page.locator('#price').fill('65000');
   const uploadedCover=await page.locator('.upload-preview img').nth(1).getAttribute('src');
   await page.getByRole('button',{name:'Make photo 2 the cover',exact:true}).click();
+  await page.waitForFunction(()=>document.activeElement?.id==='listing-photo-0');
   assert.equal(await page.locator('.upload-preview img').first().getAttribute('src'),uploadedCover);
   await page.getByRole('button',{name:'Move photo 1 later',exact:true}).click();
   assert.notEqual(await page.locator('.upload-preview img').first().getAttribute('src'),uploadedCover);
