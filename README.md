@@ -130,7 +130,7 @@ Note: **`DELETE /api/items/:id` is deliberately unsupported**. Approved removals
 
 ## Updated identity and device support
 
-Deep teal (`#07545A`) anchors the navigation and actions, coral (`#E66B49`) highlights key details, slate (`#172F3D`) keeps text clear, and cloud (`#F7FAFB`) softens page backgrounds. A custom circular ReUse logo and SVG browser icon replace the generic symbol. Content expands up to 1760px, while forms retain a readable width. Responsive layouts target 320–1920px, including touch targets, keyboard focus and reduced motion.
+Deep teal (`#07545A`) anchors the brand, violet (`#6D28D9`) highlights primary buttons across all pages, lavender (`#F3EDFF`) distinguishes secondary actions, and coral (`#E66B49`) highlights key details, slate (`#172F3D`) keeps text clear, and cloud (`#F7FAFB`) softens page backgrounds. A custom circular ReUse logo and SVG browser icon replace the generic symbol. Content expands up to 1760px, while forms retain a readable width. Responsive layouts target 320–1920px, including touch targets, keyboard focus and reduced motion.
 
 ## Live CRUD and browser verification
 
