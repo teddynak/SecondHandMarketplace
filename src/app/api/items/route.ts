@@ -7,6 +7,7 @@ import { assertSameOrigin, jsonBody } from '@/lib/security';
 import { productSchema } from '@/lib/validators';
 import { productDto } from '@/lib/serialize';
 import { CATEGORIES, CONDITIONS } from '@/types';
+import User from '@/models/User';
 import Product from '@/models/Product';
 import ImageAsset from '@/models/ImageAsset';
 export const runtime = 'nodejs';
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
   const product = await Product.create({ ...body, sellerId: user._id, sellerName: user.name, sellerEmail: user.email, status: 'available', paymentStatus: 'unpaid' });
   if (user.role === 'buyer') {
    user.role = 'seller';
-   await user.save();
+   await User.updateOne({ _id: user._id, role: 'buyer' }, { $set: { role: 'seller' } });
   }
   return NextResponse.json({ item: productDto(product) }, { status: 201 });
  } catch (error) { return apiError(error); }

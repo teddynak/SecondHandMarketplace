@@ -7,6 +7,7 @@ permissions:
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -18,3 +19,15 @@ jobs:
       - run: npm test
       - run: npm run build
       - run: npm run typecheck
+      - run: npx playwright install --with-deps chromium
+      - name: Verify database CRUD and responsive browser flows
+        run: npm run test:browser
+        env:
+          SCREENSHOT_DIR: test-results/screenshots
+      - name: Save responsive previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: responsive-previews
+          path: test-results/
+          if-no-files-found: ignore

@@ -20,7 +20,7 @@ A professional, responsive second-hand community marketplace built with **Next.j
 
 - Node.js 22 or later recommended (minimum 20.19 for these dependencies)
 - npm
-- MongoDB Atlas cluster or a running local MongoDB server
+- MongoDB Atlas cluster or a local MongoDB replica set (required for atomic admin approvals)
 
 ## Setup on Ubuntu
 
@@ -37,7 +37,7 @@ Paste the random output from `openssl` into `.env.local` as `AUTH_SECRET`, then 
 Example local development config:
 
 ```dotenv
-MONGODB_URI=mongodb://127.0.0.1:27017/reuse_market
+MONGODB_URI=mongodb://127.0.0.1:27017/reuse_market?replicaSet=rs0
 AUTH_SECRET=PASTE_A_RANDOM_SECRET_32_OR_MORE_CHARACTERS_LONG_HERE
 ADMIN_EMAIL=you@example.com
 ```
@@ -127,3 +127,22 @@ Note: **`DELETE /api/items/:id` is deliberately unsupported**. Approved removals
 - `.env.example`: non-secret environment variable template.
 
 **Owner collaboration:** The repository is meant to be extended phase-by-phase together. Start by running the app locally, then share any errors or screenshots; next we can refine specific UI and business flows before expanding functionality.
+
+## Updated identity and device support
+
+Deep teal (`#07545A`) anchors the navigation and actions, coral (`#E66B49`) highlights key details, slate (`#172F3D`) keeps text clear, and cloud (`#F7FAFB`) softens page backgrounds. A custom circular ReUse logo and SVG browser icon replace the generic symbol. Content expands up to 1760px, while forms retain a readable width. Responsive layouts target 320–1920px, including touch targets, keyboard focus and reduced motion.
+
+## Live CRUD and browser verification
+
+After building, run:
+
+```bash
+npm run build
+npm run test:integration
+npx playwright install chromium
+npm run test:browser
+```
+
+These checks start an isolated temporary MongoDB replica set and production app, then clean up both. They never use your configured application database. The first run downloads a MongoDB test binary. Browser checks cover six viewport widths, mobile navigation and filters, profile editing, listing creation/editing, and admin-approved removal. GitHub Actions runs the same checks and saves responsive screenshots as an artifact.
+
+Admin removal now commits the review and archive in one transaction. Use Atlas or initialize a local replica set before approving removals; standalone MongoDB cannot execute transactions. The dashboard no longer silently caps the seller’s listings at 200. Buyer promotion uses a conditional database update so it cannot overwrite a simultaneous admin promotion.

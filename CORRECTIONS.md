@@ -20,4 +20,4 @@ Passed: npm run build, npm run lint, npm test (9 checks), npm run typecheck.
 
 ## Remaining verification and limits
 
-No database credentials were provided. Registration, login, image persistence, sales, and admin approval still need the README’s live integration checklist. Browser interaction and mobile appearance have not been verified in this environment. This is an MVP with off-platform payments; production tasks remain listed in README. Admin approval updates two documents without a database transaction, so approval and archive are not guaranteed atomic on database failure.
+No database credentials were provided. Registration, login, image persistence, sales, and admin approval still need the README’s live integration checklist. Browser interaction and mobile appearance have not been verified in this environment. This is an MVP with off-platform payments; production tasks remain listed in README. Superseded by the responsive/CRUD update: admin approval now uses a transaction, requiring Atlas or a local replica set.
