@@ -210,13 +210,14 @@ try {
   await page.locator('.saved-search-item>a').click();
   await page.waitForURL('**/marketplace?**');
   assert.equal(new URL(page.url()).searchParams.get('location'),'Kampala');
-  let failSearch=true;
-  await page.route('**/api/items?**',route=>{if(route.request().method()==='GET'&&failSearch){failSearch=false;return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Search temporarily unavailable.'})});}return route.continue();});
+  let allowSearch=false;const searchPredicate=url=>url.pathname==='/api/items';
+  const searchFailure=route=>{if(route.request().method()==='GET'&&!allowSearch)return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Search temporarily unavailable.'})});return route.continue();};
+  await page.route(searchPredicate,searchFailure);
   await page.goto(origin+'/marketplace?q=A%20community%20desk');
   await page.getByText('Search temporarily unavailable.',{exact:true}).waitFor();
-  await page.getByRole('button',{name:'Try again',exact:true}).click();
+  allowSearch=true;await page.getByRole('button',{name:'Try again',exact:true}).click();
   await page.getByRole('link',{name:'A community desk ready for another story',exact:true}).waitFor();
-  assert.equal(new URL(page.url()).searchParams.get('q'),'A community desk');await page.unroute('**/api/items?**');
+  assert.equal(new URL(page.url()).searchParams.get('q'),'A community desk');await page.unroute(searchPredicate,searchFailure);
   console.log('PASS: browser favorites persist after reload and saved searches restore filters.');
   await page.goto(origin+'/dashboard');await page.getByRole('button',{name:'Edit profile',exact:true}).click();
   await page.locator('#profile-name').fill('Browser Seller');await page.getByRole('button',{name:'Save profile'}).click();
