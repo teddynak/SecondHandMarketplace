@@ -45,3 +45,19 @@ test('saved searches canonicalize filters and reject invalid ranges', async () =
  assert.throws(()=>canonicalSearch('category=Unknown'),/Invalid category/);
  assert.match(searchLabel('location=Kampala&category=Books'),/Books.*Kampala/);
 });
+
+test('photo ordering changes cover without mutating or losing photos', async () => {
+ const {movePhoto}=await import('../src/lib/photos');
+ const photos=['first','second','third'];
+ assert.deepEqual(movePhoto(photos,2,0),['third','first','second']);
+ assert.deepEqual(movePhoto(photos,0,1),['second','first','third']);
+ assert.deepEqual(movePhoto(photos,1,2),['first','third','second']);
+ assert.deepEqual(photos,['first','second','third']);
+ assert.equal(movePhoto(photos,-1,0),photos);assert.equal(movePhoto(photos,0,9),photos);
+});
+test('listing status explanations match available actions', async () => {
+ const {listingStatusDescription}=await import('../src/lib/listing-status');
+ assert.match(listingStatusDescription({status:'available',paymentStatus:'unpaid',deletionRequestStatus:'pending'}),/awaiting administrator review/);
+ assert.match(listingStatusDescription({status:'sold',paymentStatus:'unpaid'}),/cannot be edited.*mark payment/);
+ assert.match(listingStatusDescription({status:'archived',paymentStatus:'paid'}),/hidden from buyers/);
+});

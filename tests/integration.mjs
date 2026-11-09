@@ -77,6 +77,9 @@ try {
  assert.equal((await request('/api/items?location=Kampala')).data.total,1);
  assert.equal((await request('/api/items?location=Entebbe')).data.total,0);
  assert.equal((await request('/api/items?location=.*')).data.total,0);
+ const lastPage=(await request('/api/items?page=9999&limit=1')).data;
+ assert.equal(lastPage.page,lastPage.pages);assert.equal(lastPage.items.length,1);
+ const emptyPage=(await request('/api/items?q=definitely-no-such-item&page=9999')).data;assert.equal(emptyPage.page,1);assert.equal(emptyPage.total,0);
  const storefront=(await request(`/api/sellers/${created.sellerId}`)).data;
  assert.equal(storefront.items.length,1);assert.ok(!('email' in storefront.seller));assert.ok(!('passwordHash' in storefront.seller));
  console.log('PASS: favorites and saved searches persist without duplicates, stay private per account, and location/seller filters work.');
@@ -138,6 +141,7 @@ try {
   browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH || undefined,args:['--no-sandbox']});
   const context=await browser.newContext();
   const page=await context.newPage();browserPage=page;
+  async function capture(name){if(!process.env.SCREENSHOT_DIR)return;const {mkdir}=await import('node:fs/promises');await mkdir(process.env.SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:`${process.env.SCREENSHOT_DIR}/${name}.png`});}
   const widths=[320,375,768,1024,1440,1920];
   for(const width of widths) {
    await page.setViewportSize({width,height:900});
@@ -159,6 +163,28 @@ try {
   await page.getByRole('button',{name:'Open menu'}).click();await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('link',{name:'Explore marketplace'}).click();
   await page.waitForURL('**/marketplace');await page.getByRole('button',{name:'Filters',exact:true}).click();
   await page.getByRole('button',{name:'Close filters'}).click();
+  assert.ok(await page.getByRole('button',{name:'Filters',exact:true}).evaluate(button=>button===document.activeElement));
+  await page.getByRole('button',{name:'Filters',exact:true}).click();
+  let filters=page.getByRole('dialog',{name:'Filters',exact:true});
+  await filters.getByRole('button',{name:'Entebbe',exact:true}).click();
+  await page.keyboard.press('Escape');await filters.waitFor({state:'hidden'});
+  assert.ok(!new URL(page.url()).searchParams.has('location'));
+  await page.getByRole('button',{name:'Filters',exact:true}).click();filters=page.getByRole('dialog',{name:'Filters',exact:true});
+  assert.equal(await filters.getByLabel('Location',{exact:true}).inputValue(),'');
+  await filters.getByLabel('Category',{exact:true}).selectOption('Furniture');
+  await filters.getByRole('button',{name:'Kampala',exact:true}).click();
+  await filters.getByLabel('Minimum',{exact:true}).fill('90000');await filters.getByLabel('Maximum',{exact:true}).fill('1000');
+  await filters.getByRole('button',{name:'Apply filters',exact:true}).click();
+  await filters.getByText('Maximum price must be at least the minimum price.',{exact:true}).waitFor();
+  await filters.getByLabel('Maximum',{exact:true}).fill('100000');
+  await capture('filters-mobile');
+  await filters.getByRole('button',{name:'Apply filters',exact:true}).click();
+  await page.waitForURL(url=>url.searchParams.get('location')==='Kampala'&&url.searchParams.get('minPrice')==='90000');
+  await filters.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:'Remove location filter',exact:true}).click();await page.waitForURL(url=>!url.searchParams.has('location'));
+  assert.equal(new URL(page.url()).searchParams.get('category'),'Furniture');
+  console.log('PASS: mobile filters apply together, validate price ranges, cancel without changes and restore keyboard focus.');
+
   const token=seller.slice(seller.indexOf('=')+1);
   await context.addCookies([{name:'reuse_market_session',value:token,url:origin,httpOnly:true,sameSite:'Lax'}]);
   for(const width of widths) {
@@ -184,6 +210,13 @@ try {
   await page.locator('.saved-search-item>a').click();
   await page.waitForURL('**/marketplace?**');
   assert.equal(new URL(page.url()).searchParams.get('location'),'Kampala');
+  let failSearch=true;
+  await page.route('**/api/items?**',route=>{if(route.request().method()==='GET'&&failSearch){failSearch=false;return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Search temporarily unavailable.'})});}return route.continue();});
+  await page.goto(origin+'/marketplace?q=A%20community%20desk');
+  await page.getByText('Search temporarily unavailable.',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Try again',exact:true}).click();
+  await page.getByRole('link',{name:'A community desk ready for another story',exact:true}).waitFor();
+  assert.equal(new URL(page.url()).searchParams.get('q'),'A community desk');await page.unroute('**/api/items?**');
   console.log('PASS: browser favorites persist after reload and saved searches restore filters.');
   await page.goto(origin+'/dashboard');await page.getByRole('button',{name:'Edit profile',exact:true}).click();
   await page.locator('#profile-name').fill('Browser Seller');await page.getByRole('button',{name:'Save profile'}).click();
@@ -196,12 +229,39 @@ try {
   await page.locator('#title').fill('Browser created chair');
   await page.locator('#description').fill('A comfortable chair created using the real listing form.');
   await page.locator('#price').fill('65000');
-  await page.getByRole('button',{name:'Publish listing'}).click();
+  const uploadedCover=await page.locator('.upload-preview img').nth(1).getAttribute('src');
+  await page.getByRole('button',{name:'Make photo 2 the cover',exact:true}).click();
+  assert.equal(await page.locator('.upload-preview img').first().getAttribute('src'),uploadedCover);
+  await page.getByRole('button',{name:'Move photo 1 later',exact:true}).click();
+  assert.notEqual(await page.locator('.upload-preview img').first().getAttribute('src'),uploadedCover);
+  await page.getByRole('button',{name:'Move photo 2 earlier',exact:true}).click();
+  await page.getByRole('button',{name:'Review listing',exact:true}).click();
+  let preview=page.getByRole('dialog',{name:'Preview your listing',exact:true});await preview.waitFor();
+  assert.equal(await db.db().collection('products').countDocuments({title:'Browser created chair'}),0);
+  assert.equal(await preview.locator('.listing-preview-photo img').getAttribute('src'),uploadedCover);
+  for(const width of widths){await page.setViewportSize({width,height:900});assert.ok(await preview.evaluate(dialog=>{const rect=dialog.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth+1&&rect.top>=0&&rect.bottom<=innerHeight+1;}),`Preview escapes viewport at ${width}`);}
+  await page.setViewportSize({width:375,height:812});await capture('listing-preview-mobile');
+  for(let i=0;i<12;i++){await page.keyboard.press('Tab');assert.ok(await preview.evaluate(dialog=>dialog.contains(document.activeElement)),'Focus escaped listing preview');}
+  await page.keyboard.press('Escape');await preview.waitFor({state:'hidden'});
+  assert.ok(await page.getByRole('button',{name:'Review listing',exact:true}).evaluate(button=>button===document.activeElement));
+  assert.equal(await page.locator('#title').inputValue(),'Browser created chair');
+  await page.setViewportSize({width:1440,height:900});await page.getByRole('button',{name:'Review listing',exact:true}).click();
+  preview=page.getByRole('dialog',{name:'Preview your listing',exact:true});await preview.waitFor();await capture('listing-preview-desktop');
+  let failPublish=true;
+  await page.route('**/api/items',route=>{if(route.request().method()==='POST'&&failPublish){failPublish=false;return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Temporary publish failure. Please retry.'})});}return route.continue();});
+  await preview.getByRole('button',{name:'Publish listing',exact:true}).click();
+  await preview.getByText('Temporary publish failure. Please retry.',{exact:true}).waitFor();
+  assert.equal(await db.db().collection('products').countDocuments({title:'Browser created chair'}),0);
+  await preview.getByRole('button',{name:'Publish listing',exact:true}).click();
   await page.waitForURL('**/items/**');
+  await page.unroute('**/api/items');
   const browserItemId=new URL(page.url()).pathname.split('/').pop();
+  assert.equal((await request(`/api/items/${browserItemId}`)).data.item.images[0],uploadedCover);
+  console.log('PASS: photo cover/reordering persists, previews do not publish, dialogs contain focus, and failed publishing retries safely.');
   await page.goto(`${origin}/dashboard/edit/${browserItemId}`);
   await page.locator('#title').fill('Browser updated chair');
-  await page.getByRole('button',{name:'Save changes'}).click();
+  await page.getByRole('button',{name:'Review changes',exact:true}).click();
+  await page.getByRole('dialog',{name:'Review your changes',exact:true}).getByRole('button',{name:'Save changes',exact:true}).click();
   await page.waitForURL('**/items/**');
   await page.getByRole('heading',{name:'Browser updated chair',exact:true}).waitFor();
   await page.goto(origin+'/dashboard');
@@ -210,6 +270,8 @@ try {
   await page.getByRole('dialog').locator('textarea').fill('Browser test removal after editing the listing.');
   await page.getByRole('button',{name:'Submit request'}).click();
   await page.getByRole('dialog').waitFor({state:'hidden'});
+  await row.getByText('Removal is awaiting administrator review.',{exact:false}).waitFor();
+  assert.ok(await row.getByRole('button',{name:'Deletion pending',exact:true}).isDisabled());
   await context.addCookies([{name:'reuse_market_session',value:admin.slice(admin.indexOf('=')+1),url:origin,httpOnly:true,sameSite:'Lax'}]);
   await page.goto(origin+'/admin');
   const requestRow=page.locator('.request-card').filter({hasText:'Browser updated chair'});

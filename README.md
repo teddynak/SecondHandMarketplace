@@ -211,3 +211,11 @@ This command creates that administrator directly; registration is not required. 
 The marketplace now supports location filtering and quick UGX budgets. Hearts save available listings to your account; `/saved` holds items and reusable searches. Saved searches keep your keyword and filters, but do not send notifications. Accounts can hold up to 200 saved item IDs and 20 saved searches. Sold/archived items disappear from the available collection. A seller name opens `/sellers/:id` with the seller’s public profile and available items. Product details include other available listings in the same category.
 
 See [MARKETPLACE_REVIEW.md](MARKETPLACE_REVIEW.md) for the comparison with Vinted, Carousell and Jiji Uganda and the resulting design decisions. These additions use MongoDB and the existing server environment variables; no new API keys are needed.
+
+## Phase 1: review-first listings and accessible filters
+
+Use the photo arrow controls or **Make cover** to choose the image order. **Review listing** opens a draft; **Publish listing** makes it live only after confirmation. Existing listings use **Review changes → Save changes**. Closing a preview keeps the form values, but drafts do not survive page reloads.
+
+Mobile filters now apply together in an accessible modal, with location shortcuts and visible active filters. Escape/cancel preserves the current results. Native dashboard dialogs support focus containment and restoration. Available, sold, archived and pending-removal explanations clarify which actions are possible. Load errors offer retry controls.
+
+See [PHASE_1.md](PHASE_1.md) for implementation, validation and limitations. No new server environment variables are required. Phases 2–5 have not been implemented by this update.

@@ -39,11 +39,14 @@ export async function GET(request: NextRequest) {
   if (price.$gte !== undefined && price.$lte !== undefined && price.$gte > price.$lte) throw new AppError('Minimum price must not exceed maximum price.');
   if (Object.keys(price).length) filter.price = price;
   const sorting: Record<string, 1|-1> = sort === 'price-low' ? { price: 1, _id: 1 } : sort === 'price-high' ? { price: -1, _id: -1 } : { createdAt: -1, _id: -1 };
-  const [items, total] = await Promise.all([
+  const [foundItems, total] = await Promise.all([
    Product.find(filter).sort(sorting).skip((page - 1) * limit).limit(limit).lean(),
    Product.countDocuments(filter)
   ]);
-  return NextResponse.json({ items: items.map(p => productDto(p)), total, page, pages: Math.max(1, Math.ceil(total / limit)) });
+  let items=foundItems;
+  const pages=Math.max(1,Math.ceil(total/limit));const resultPage=Math.min(page,pages);
+  if(resultPage!==page)items=total?await Product.find(filter).sort(sorting).skip((resultPage-1)*limit).limit(limit).lean():[];
+  return NextResponse.json({items:items.map(p=>productDto(p)),total,page:resultPage,pages});
  } catch (error) { return apiError(error); }
 }
 export async function POST(request: NextRequest) {
