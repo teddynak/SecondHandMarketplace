@@ -2,7 +2,7 @@
 
 A professional, responsive second-hand community marketplace built with **Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, MongoDB and Mongoose**.
 
-> **Status:** Corrected source-code MVP. Production build, TypeScript checks, ESLint, and nine automated tests passed on 9 November 2026. Live MongoDB integration and browser end-to-end checks have not been run because no database connection was supplied.
+> **Status:** Tested source-code MVP. GitHub Actions passed production build, TypeScript, ESLint, nine automated unit/architecture checks, live CRUD checks against an isolated MongoDB replica set, and Chromium browser flows at six viewport widths on 9 November 2026. Configure your production database and authentication secret before running with real users.
 
 ## Implemented features
 

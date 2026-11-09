@@ -89,6 +89,14 @@ try {
     await page.goto(origin+path);await page.waitForLoadState('networkidle');
     const dimensions=await page.evaluate(()=>({body:document.documentElement.scrollWidth,viewport:innerWidth}));
     assert.ok(dimensions.body<=dimensions.viewport+1,`Overflow at ${width}px on ${path}: ${JSON.stringify(dimensions)}`);
+    if(path==='/') {
+     const overlap=await page.locator('.category-card').evaluateAll(cards=>cards.some(card=>{
+      const art=card.querySelector('.category-art').getBoundingClientRect();
+      const title=card.querySelector('h3').getBoundingClientRect();
+      return art.left<title.right && art.right>title.left && art.top<title.bottom && art.bottom>title.top;
+     }));
+     assert.equal(overlap,false,`Category artwork overlaps labels at ${width}px`);
+    }
    }
   }
   await page.setViewportSize({width:375,height:812});await page.goto(origin);
