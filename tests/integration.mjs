@@ -74,6 +74,13 @@ try {
  assert.equal((await request('/api/items')).data.total,0);
  await request('/api/me',{method:'PATCH',cookie:seller,body:{name:'Seller Updated',phone:'0777654321',location:'Entebbe'}});
  assert.equal((await request('/api/my/items',{cookie:seller})).data.items[0].sellerName,'Seller Updated');
+ const linked=(await request('/api/items',{method:'POST',cookie:seller,body:{...item,title:'Linked image listing',images:['https://images.unsplash.com/photo-1503602642458-232111445657?w=400']},status:201})).data.item;
+ await request(`/api/items/${linked.id}`,{method:'PATCH',cookie:seller,body:{images:[linked.images[0],upload.url]}});
+ assert.equal((await request(`/api/items/${linked.id}`)).data.item.images.length,2);
+ await request(`/api/items/${linked.id}`,{method:'PATCH',cookie:other,body:{images:[upload.url]},status:403});
+ await request('/api/items',{method:'POST',cookie:seller,body:{...item,images:['http://example.test/image.jpg']},status:400});
+ await request('/api/items',{method:'POST',cookie:seller,body:{...item,images:['javascript:alert(1)']},status:400});
+ console.log('PASS: linked and uploaded images work together, unsafe links and unauthorized edits are rejected.');
  console.log('PASS: registration, login, image upload/read, listing CRUD, search, ownership, role upgrade, admin rejection/approval, archived visibility, sales, payment status and profile updates.');
  // A visible item for responsive UI checks.
  await request('/api/items',{method:'POST',cookie:seller,body:{...item,title:'A community desk ready for another story'},status:201});
@@ -116,6 +123,10 @@ try {
   await page.locator('#profile-name').fill('Browser Seller');await page.getByRole('button',{name:'Save profile'}).click();
   await page.getByRole('dialog').waitFor({state:'hidden'});
   await page.goto(origin+'/sell');
+  await page.locator('#image-url').fill('https://images.unsplash.com/photo-1503602642458-232111445657?w=400');
+  await page.getByRole('button',{name:'Add image link',exact:true}).click();
+  await page.locator('input[type=file]').setInputFiles({name:'photo.png',mimeType:'image/png',buffer:Buffer.concat([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64'),Buffer.alloc(100)])});
+  await page.locator('.upload-preview').nth(1).waitFor();
   await page.locator('#title').fill('Browser created chair');
   await page.locator('#description').fill('A comfortable chair created using the real listing form.');
   await page.locator('#price').fill('65000');
@@ -147,6 +158,28 @@ try {
   }
   await browser.close();browser=undefined;
  }
+ async function runSeed(storeImages=false) {
+  const child=spawn(process.execPath,['--import','tsx','scripts/seed.ts',...(storeImages?['--store-images']:[])],{env:{...process.env,MONGODB_URI:uri,SEED_PASSWORD:'integration-demo-private-password'},stdio:['ignore','pipe','pipe']});
+  let output='';child.stdout.on('data',data=>{output+=data;});child.stderr.on('data',data=>{output+=data;});
+  await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error(`Seed failed: ${output}`)));});
+  console.log(output);
+ }
+ const setup=spawn(process.execPath,['--import','tsx','scripts/setup-admin.ts'],{env:{...process.env,MONGODB_URI:uri,ADMIN_EMAIL:'owner@example.test',ADMIN_PASSWORD:'prototype-admin-123'},stdio:'ignore'});
+ await new Promise((resolve,reject)=>{setup.on('error',reject);setup.on('exit',code=>code===0?resolve():reject(new Error(`Admin setup exit ${code}`)));});
+ const owner=await request('/api/auth/login',{method:'POST',body:{email:'owner@example.test',password:'prototype-admin-123'}});
+ assert.equal(owner.data.user.role,'admin');
+ console.log('PASS: configured admin account can sign in.');
+ await runSeed();
+ const counts=await Promise.all(['users','products','imageassets'].map(name=>db.db().collection(name).countDocuments()));
+ const demo=await db.db().collection('products').findOne({title:'Compact study desk'});
+ assert.ok(demo);
+ await db.db().collection('products').updateOne({_id:demo._id},{$set:{title:'My edited demo desk'}});
+ await runSeed();
+ assert.deepEqual(await Promise.all(['users','products','imageassets'].map(name=>db.db().collection(name).countDocuments())),counts);
+ assert.equal((await db.db().collection('products').findOne({_id:demo._id})).title,'My edited demo desk');
+ await runSeed(true);
+ assert.deepEqual(await Promise.all(['users','products'].map(name=>db.db().collection(name).countDocuments())),counts.slice(0,2));
+ console.log('PASS: seed is repeatable, preserves listing edits, and supports catalog images stored in MongoDB.');
  await request('/api/auth/logout',{method:'POST',cookie:seller});
  console.log('Integration checks completed.');
 } catch(error) { console.error(logs); throw error; }

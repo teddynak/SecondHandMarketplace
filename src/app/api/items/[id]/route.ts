@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isStoredImage } from '@/lib/image-source';
 import { Types } from 'mongoose';
 import { requireUser, currentUser } from '@/lib/auth';
 import { apiError, AppError } from '@/lib/errors';
@@ -50,7 +51,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
    if (product.status !== 'available') throw new AppError('Sold products cannot be edited.', 409);
    const updates = productUpdateSchema.parse(input);
    if (updates.images) {
-    const ids = updates.images.map(path => new Types.ObjectId(path.split('/').pop()));
+    const ids = updates.images.filter(isStoredImage).map(path => new Types.ObjectId(path.split('/').pop()));
     const count = await ImageAsset.countDocuments({ _id: { $in: ids }, ownerId: user._id });
     if (count !== new Set(ids.map(String)).size) throw new AppError('Some images are not yours.', 403);
    }

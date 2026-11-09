@@ -6,6 +6,7 @@ import { toast } from 'sonner';
 import type { Product } from '@/types';
 import { CATEGORIES, CONDITIONS } from '@/types';
 import { useAuth } from '@/components/AuthProvider';
+import { isImageSource } from '@/lib/image-source';
 import { api } from '@/lib/client';
 import ProductImage from './ProductImage';
 import { Notice } from './Notice';
@@ -15,7 +16,15 @@ export default function ListingForm({ product }: { product?: Product }) {
  const [category, setCategory] = useState<string>(product?.category ?? 'Clothing'); const [condition, setCondition] = useState<string>(product?.condition ?? 'Good');
  const [price, setPrice] = useState(product?.price?.toString() ?? ''); const [location, setLocation] = useState(product?.location ?? user?.location ?? '');
  const [phone, setPhone] = useState(product?.sellerPhone ?? user?.phone ?? ''); const [images, setImages] = useState<string[]>(product?.images ?? []);
+ const [imageUrl, setImageUrl] = useState('');
  const [busy, setBusy] = useState(false); const [uploading, setUploading] = useState(false); const [error, setError] = useState('');
+ function addImageUrl() {
+  const value = imageUrl.trim();
+  if (!value.startsWith('https://') || !isImageSource(value)) { setError('Enter a valid HTTPS link to an image.'); return; }
+  if (images.length >= 4) { setError('You can add up to 4 photos in total.'); return; }
+  if (images.includes(value)) { setError('That image is already added.'); return; }
+  setImages(previous => [...previous, value]); setImageUrl(''); setError('');
+ }
  async function uploadFiles(files: FileList | null) {
   if (!files?.length) return;
   setUploading(true); setError('');
@@ -36,7 +45,9 @@ export default function ListingForm({ product }: { product?: Product }) {
   finally { setUploading(false); if (fileRef.current) fileRef.current.value = ''; }
  }
  async function submit(event: FormEvent) {
-  event.preventDefault(); setBusy(true); setError('');
+  event.preventDefault();
+  if (imageUrl.trim()) { setError('Click Add image link, or clear the image URL before publishing.'); return; }
+  setBusy(true); setError('');
   try {
    const payload = { title, description, category, condition, price:Number(price), location, sellerPhone:phone, images };
    const response = await api<{ item: Product }>(product ? `/api/items/${product.id}` : '/api/items', { method: product ? 'PATCH':'POST', body: JSON.stringify(payload) });
@@ -48,8 +59,9 @@ export default function ListingForm({ product }: { product?: Product }) {
  return <form className="listing-form" onSubmit={submit}>
   {error && <Notice message={error}/>}
   <div className="form-card"><div className="form-card-heading"><span className="form-step-icon"><Camera size={23}/></span><div><h2>Product photos</h2><p>Good photos help your item find a new home. Up to 4 images.</p></div></div>
-   <div className="image-upload-grid">{images.map((url,i) => <div className="upload-preview" key={url}><ProductImage src={url} alt={`Photo ${i+1}`}/><button type="button" className="remove-photo" onClick={() => setImages(v=>v.filter((_,index)=>index!==i))} aria-label={`Remove photo ${i+1}`}><X size={16}/></button>{i===0 && <span className="cover-photo">Cover</span>}</div>)}
-   {images.length < 4 && <button type="button" className="upload-target" onClick={() => fileRef.current?.click()} disabled={uploading}><ImagePlus size={31}/><strong>{uploading ? 'Uploading...' : 'Add photos'}</strong><span>JPG, PNG or WebP · Max 2 MB</span></button>}</div>
+   <div className="image-upload-grid">{images.map((url,i) => <div className="upload-preview" key={url}><ProductImage src={url} alt={`Photo ${i+1}`}/><button type="button" className="remove-photo" onClick={() => setImages(v=>v.filter((_,index)=>index!==i))} disabled={uploading||busy} aria-label={`Remove photo ${i+1}`}><X size={16}/></button>{i===0 && <span className="cover-photo">Cover</span>}</div>)}
+   {images.length < 4 && <button type="button" className="upload-target" onClick={() => fileRef.current?.click()} disabled={uploading||busy}><ImagePlus size={31}/><strong>{uploading ? 'Uploading...' : 'Add photos'}</strong><span>JPG, PNG or WebP · Max 2 MB</span></button>}</div>
+   <div className="image-url-field"><label htmlFor="image-url">Or add an image link</label><div className="image-url-row"><input className="input" id="image-url" type="url" maxLength={2048} value={imageUrl} onChange={event=>setImageUrl(event.target.value)} onKeyDown={event=>{if(event.key==='Enter'){event.preventDefault();addImageUrl();}}} placeholder="https://example.com/photo.jpg" disabled={uploading||busy||images.length>=4}/><button className="btn btn-outline" type="button" onClick={addImageUrl} disabled={uploading||busy||images.length>=4||!imageUrl.trim()}>Add image link</button></div><p className="field-hint">Upload JPG, PNG or WebP to save the photo in our database (2 MB each), or paste a public HTTPS image link. Up to 4 photos total. Linked images remain on their original website.</p></div>
    <input ref={fileRef} hidden type="file" accept="image/png,image/jpeg,image/webp" multiple onChange={event=>void uploadFiles(event.target.files)}/>
   </div>
   <div className="form-card"><div className="form-card-heading"><span className="form-step-icon">01</span><div><h2>Tell us about your item</h2><p>A few details make a great listing.</p></div></div>

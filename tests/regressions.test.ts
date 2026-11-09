@@ -25,3 +25,13 @@ test('body limits apply to bytes without trusting content-length', async () => {
  await assert.rejects(jsonBody(new NextRequest('http://localhost/api', {method:'POST',body:'{bad'})), /valid JSON/);
  assert.deepEqual(await jsonBody(new NextRequest('http://localhost/api', {method:'POST',body:'{"ok":true}'})), {ok:true});
 });
+
+test('image sources accept uploaded paths and HTTPS links only', async () => {
+ const { isImageSource } = await import('../src/lib/image-source');
+ for (const source of ['/api/images/0123456789abcdef01234567', 'https://images.example.test/photo.jpg?size=large']) assert.equal(isImageSource(source),true);
+ for (const source of ['javascript:alert(1)','data:image/svg+xml,test','http://images.example.test/a.jpg','//images.example.test/a.jpg','https://user:password@images.example.test/a.jpg','/api/images/not-an-id']) assert.equal(isImageSource(source),false);
+ const input={title:'Test item',description:'A useful description of this item.',category:'Clothing',condition:'Good',price:1,location:'Kampala',sellerPhone:'0771234567',images:['https://images.example.test/a.jpg']};
+ assert.equal(productSchema.safeParse(input).success,true);
+ assert.equal(productSchema.safeParse({...input,images:Array(5).fill(input.images[0])}).success,false);
+ assert.equal(productSchema.safeParse({...input,images:[input.images[0],input.images[0]]}).success,false);
+});

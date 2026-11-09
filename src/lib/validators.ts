@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isImageSource } from './image-source';
 import { CATEGORIES, CONDITIONS } from '@/types';
 const simpleText = (min: number, max: number) => z.string().trim().min(min).max(max);
 export const registerSchema = z.object({
@@ -12,7 +13,7 @@ export const productSchema = z.object({
  title: simpleText(3,110), description: simpleText(15,2500), category: z.enum(CATEGORIES),
  price: z.number().int().min(1).max(1_000_000_000), condition: z.enum(CONDITIONS),
  location: simpleText(2,120), sellerPhone: simpleText(7,25),
- images: z.array(z.string().trim().refine((v) => /^\/api\/images\/[a-f0-9]{24}$/.test(v), 'Please upload images using the form.')).max(4)
+ images: z.array(z.string().trim().max(2048).refine(isImageSource, 'Use an uploaded image or a valid HTTPS image URL.')).max(4).refine(values => new Set(values).size === values.length, 'Each photo must be unique.')
 });
 export const productUpdateSchema = productSchema.partial().refine((v) => Object.keys(v).length > 0, 'Nothing to update.');
 export const deletionSchema = z.object({ productId: z.string().regex(/^[a-f\d]{24}$/i), reason: simpleText(10,600) });

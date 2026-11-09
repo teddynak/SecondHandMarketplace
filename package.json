@@ -11,7 +11,10 @@
     "test": "node --import tsx --test tests/*.test.mjs tests/*.test.ts",
     "make-admin": "tsx scripts/make-admin.ts",
     "test:integration": "node tests/integration.mjs",
-    "test:browser": "BROWSER_CHECKS=1 node tests/integration.mjs"
+    "test:browser": "BROWSER_CHECKS=1 node tests/integration.mjs",
+    "seed": "node --import tsx scripts/seed.ts",
+    "seed:images": "node --import tsx scripts/seed.ts --store-images",
+    "setup-admin": "node --import tsx scripts/setup-admin.ts"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

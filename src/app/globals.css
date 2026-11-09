@@ -71,3 +71,6 @@ button,a,input,textarea,select{-webkit-tap-highlight-color:transparent}.small-ac
 .category-card{min-width:0;gap:18px}.category-art{position:static;align-self:flex-end;flex-shrink:0}.category-card>div:not(.category-art){margin-top:auto;padding-right:18px}.category-card h3{font-size:clamp(16px,1.5vw,21px)}
 .section-kicker-light{color:#c1e2e3}
 @media(max-width:720px){.category-card{gap:14px}.category-card p{overflow-wrap:anywhere}}
+
+.image-url-field{margin-top:24px}.image-url-field>label{display:block;font-size:13px;font-weight:750;margin-bottom:9px}.image-url-row{display:flex;align-items:stretch;gap:10px}.image-url-row .input{flex:1;min-width:0}.image-url-field .field-hint{display:block;margin-top:10px;line-height:1.7;color:var(--muted)}
+@media(max-width:540px){.image-url-row{flex-direction:column}.image-url-row .btn{width:100%}}

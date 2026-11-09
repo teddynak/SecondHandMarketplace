@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { isStoredImage } from '@/lib/image-source';
 import { Types } from 'mongoose';
 import { connectDb } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
   const user = await requireUser();
   const body = productSchema.parse(await jsonBody(request));
   if (body.images.length) {
-   const ids = body.images.map(path => new Types.ObjectId(path.split('/').pop()));
+   const ids = body.images.filter(isStoredImage).map(path => new Types.ObjectId(path.split('/').pop()));
    const count = await ImageAsset.countDocuments({ _id: { $in: ids }, ownerId: user._id });
    if (count !== new Set(ids.map(String)).size) throw new AppError('One or more uploaded images do not belong to your account.', 403);
   }
