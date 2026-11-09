@@ -162,7 +162,7 @@ try {
   await page.setViewportSize({width:375,height:812});await page.goto(origin);
   await page.getByRole('button',{name:'Open menu'}).click();await page.getByRole('navigation',{name:'Mobile navigation'}).getByRole('link',{name:'Explore marketplace'}).click();
   await page.waitForURL('**/marketplace');await page.getByRole('button',{name:'Filters',exact:true}).click();
-  await page.getByRole('button',{name:'Close filters'}).click();
+  await page.getByRole('button',{name:'Close filters'}).click();await page.getByRole('dialog',{name:'Filters',exact:true}).waitFor({state:'hidden'});
   assert.ok(await page.getByRole('button',{name:'Filters',exact:true}).evaluate(button=>button===document.activeElement));
   await page.getByRole('button',{name:'Filters',exact:true}).click();
   let filters=page.getByRole('dialog',{name:'Filters',exact:true});
