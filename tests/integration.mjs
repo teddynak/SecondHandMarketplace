@@ -18,6 +18,7 @@ server.stdout.on('data', data => { logs += data; });
 server.stderr.on('data', data => { logs += data; });
 const db = new MongoClient(uri);
 let browser;
+let browserPage;
 async function request(path, {cookie, method='GET', body, status=200}={}) {
  const headers = { Origin: origin };
  if (cookie) headers.Cookie = cookie;
@@ -136,7 +137,7 @@ try {
   const { chromium }=await import('playwright');
   browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH || undefined,args:['--no-sandbox']});
   const context=await browser.newContext();
-  const page=await context.newPage();
+  const page=await context.newPage();browserPage=page;
   const widths=[320,375,768,1024,1440,1920];
   for(const width of widths) {
    await page.setViewportSize({width,height:900});
@@ -167,7 +168,7 @@ try {
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Signed-in overflow at ${width}px on ${path}`);
    }
   }
-  await page.goto(origin+'/marketplace');
+  await page.goto(origin+'/marketplace?q=A%20community%20desk');
   await page.getByRole('button',{name:'Save A community desk ready for another story',exact:true}).click();
   await page.getByRole('button',{name:'Remove A community desk ready for another story from saved items',exact:true}).waitFor();
   await page.reload();
@@ -225,7 +226,7 @@ try {
  }
  await request('/api/auth/logout',{method:'POST',cookie:seller});
  console.log('Integration checks completed.');
-} catch(error) { console.error(logs); throw error; }
+} catch(error) { if(browserPage&&process.env.SCREENSHOT_DIR){const {mkdir}=await import('node:fs/promises');await mkdir(process.env.SCREENSHOT_DIR,{recursive:true});await browserPage.screenshot({path:`${process.env.SCREENSHOT_DIR}/failure.png`,fullPage:true}).catch(()=>{});} console.error(logs); throw error; }
 finally {
  if(browser)await browser.close();
  server.kill('SIGTERM');
