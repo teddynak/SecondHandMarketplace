@@ -56,6 +56,29 @@ try {
  await request(`/api/items/${created.id}`,{method:'PATCH',cookie:other,body:{price:1},status:403});
  assert.equal((await request('/api/items?q=Updated&minPrice=70000&maxPrice=80000')).data.total,1);
  await request('/api/items?minPrice=80000&maxPrice=70000',{status:400});
+ await request('/api/favorites',{status:401});
+ await request('/api/favorites',{method:'POST',cookie:seller,body:{productId:created.id}});
+ await request('/api/favorites',{method:'POST',cookie:seller,body:{productId:created.id}});
+ assert.equal((await request('/api/favorites',{cookie:seller})).data.ids.length,1);
+ assert.equal((await request('/api/favorites',{cookie:other})).data.ids.length,0);
+ assert.equal((await request('/api/favorites',{cookie:seller})).data.items[0].id,created.id);
+ await request('/api/favorites',{method:'DELETE',cookie:other,body:{productId:created.id}});
+ assert.equal((await request('/api/favorites',{cookie:seller})).data.items.length,1);
+ const savedSearch=(await request('/api/saved-searches',{method:'POST',cookie:seller,body:{params:'location=Kampala&category=Furniture&maxPrice=100000&page=9'}})).data;
+ await request('/api/saved-searches',{method:'POST',cookie:seller,body:{params:'maxPrice=100000&category=Furniture&location=Kampala'}});
+ assert.equal((await request('/api/saved-searches',{cookie:seller})).data.searches.length,1);
+ assert.ok(!savedSearch.params.includes('page='));
+ assert.equal((await request('/api/saved-searches',{cookie:other})).data.searches.length,0);
+ await request('/api/saved-searches',{method:'DELETE',cookie:other,body:{id:savedSearch.id}});
+ assert.equal((await request('/api/saved-searches',{cookie:seller})).data.searches.length,1);
+ await request('/api/saved-searches',{method:'DELETE',cookie:seller,body:{id:savedSearch.id}});
+ await request('/api/saved-searches',{method:'POST',cookie:seller,body:{params:'minPrice=90000&maxPrice=1'},status:400});
+ assert.equal((await request('/api/items?location=Kampala')).data.total,1);
+ assert.equal((await request('/api/items?location=Entebbe')).data.total,0);
+ assert.equal((await request('/api/items?location=.*')).data.total,0);
+ const storefront=(await request(`/api/sellers/${created.sellerId}`)).data;
+ assert.equal(storefront.items.length,1);assert.ok(!('email' in storefront.seller));assert.ok(!('passwordHash' in storefront.seller));
+ console.log('PASS: favorites and saved searches persist without duplicates, stay private per account, and location/seller filters work.');
  await request('/api/deletion-requests',{method:'POST',cookie:other,body:{productId:created.id,reason:'Please remove this listing.'},status:403});
  const removal=(await request('/api/deletion-requests',{method:'POST',cookie:seller,body:{productId:created.id,reason:'Please remove this listing.'},status:201})).data;
  await request('/api/deletion-requests',{method:'POST',cookie:seller,body:{productId:created.id,reason:'Duplicate request for removal.'},status:409});
@@ -66,6 +89,9 @@ try {
  await request(`/api/admin/deletion-requests/${second.id}`,{method:'PATCH',cookie:admin,body:{decision:'approved'}});
  await request(`/api/items/${created.id}`,{status:404});
  assert.equal((await request(`/api/items/${created.id}`,{cookie:seller})).data.item.status,'archived');
+ assert.equal((await request('/api/favorites',{cookie:seller})).data.items.length,0);
+ await request('/api/favorites',{method:'POST',cookie:seller,body:{productId:created.id},status:404});
+ await request('/api/favorites',{method:'DELETE',cookie:seller,body:{productId:created.id}});
  await request(`/api/admin/deletion-requests/${second.id}`,{method:'PATCH',cookie:admin,body:{decision:'rejected'},status:409});
  const sale=(await request('/api/items',{method:'POST',cookie:seller,body:{...item,title:'Desk for sale'},status:201})).data.item;
  await request(`/api/items/${sale.id}`,{method:'PATCH',cookie:seller,body:{action:'complete-sale',paid:false}});
@@ -84,6 +110,28 @@ try {
  console.log('PASS: registration, login, image upload/read, listing CRUD, search, ownership, role upgrade, admin rejection/approval, archived visibility, sales, payment status and profile updates.');
  // A visible item for responsive UI checks.
  await request('/api/items',{method:'POST',cookie:seller,body:{...item,title:'A community desk ready for another story'},status:201});
+ async function runSeed(storeImages=false) {
+  const child=spawn(process.execPath,['--import','tsx','scripts/seed.ts',...(storeImages?['--store-images']:[])],{env:{...process.env,MONGODB_URI:uri,SEED_PASSWORD:'integration-demo-private-password'},stdio:['ignore','pipe','pipe']});
+  let output='';child.stdout.on('data',data=>{output+=data;});child.stderr.on('data',data=>{output+=data;});
+  await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error(`Seed failed: ${output}`)));});
+  console.log(output);
+ }
+ const setup=spawn(process.execPath,['--import','tsx','scripts/setup-admin.ts'],{env:{...process.env,MONGODB_URI:uri,ADMIN_EMAIL:'owner@example.test',ADMIN_PASSWORD:'prototype-admin-123'},stdio:'ignore'});
+ await new Promise((resolve,reject)=>{setup.on('error',reject);setup.on('exit',code=>code===0?resolve():reject(new Error(`Admin setup exit ${code}`)));});
+ const owner=await request('/api/auth/login',{method:'POST',body:{email:'owner@example.test',password:'prototype-admin-123'}});
+ assert.equal(owner.data.user.role,'admin');
+ console.log('PASS: configured admin account can sign in.');
+ await runSeed();
+ const counts=await Promise.all(['users','products','imageassets'].map(name=>db.db().collection(name).countDocuments()));
+ const demo=await db.db().collection('products').findOne({title:'Compact study desk'});
+ assert.ok(demo);
+ await db.db().collection('products').updateOne({_id:demo._id},{$set:{title:'My edited demo desk'}});
+ await runSeed();
+ assert.deepEqual(await Promise.all(['users','products','imageassets'].map(name=>db.db().collection(name).countDocuments())),counts);
+ assert.equal((await db.db().collection('products').findOne({_id:demo._id})).title,'My edited demo desk');
+ await runSeed(true);
+ assert.deepEqual(await Promise.all(['users','products'].map(name=>db.db().collection(name).countDocuments())),counts.slice(0,2));
+ console.log('PASS: seed is repeatable, preserves listing edits, and supports catalog images stored in MongoDB.');
  if(process.env.BROWSER_CHECKS==='1') {
   const { chromium }=await import('playwright');
   browser=await chromium.launch({headless:true,executablePath:process.env.CHROMIUM_PATH || undefined,args:['--no-sandbox']});
@@ -114,11 +162,28 @@ try {
   await context.addCookies([{name:'reuse_market_session',value:token,url:origin,httpOnly:true,sameSite:'Lax'}]);
   for(const width of widths) {
    await page.setViewportSize({width,height:900});
-   for(const path of ['/dashboard','/sell',`/items/${sale.id}`,`/dashboard/edit/${created.id}`]) {
+   for(const path of ['/dashboard','/sell','/saved',`/sellers/${created.sellerId}`,`/items/${sale.id}`,`/dashboard/edit/${created.id}`]) {
     await page.goto(origin+path);await page.waitForLoadState('networkidle');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Signed-in overflow at ${width}px on ${path}`);
    }
   }
+  await page.goto(origin+'/marketplace');
+  await page.getByRole('button',{name:'Save A community desk ready for another story',exact:true}).click();
+  await page.getByRole('button',{name:'Remove A community desk ready for another story from saved items',exact:true}).waitFor();
+  await page.reload();
+  assert.equal(await page.getByRole('button',{name:'Remove A community desk ready for another story from saved items',exact:true}).getAttribute('aria-pressed'),'true');
+  await page.goto(origin+'/saved');
+  await page.getByRole('link',{name:'A community desk ready for another story',exact:true}).waitFor();
+  await page.getByRole('button',{name:'Remove A community desk ready for another story from saved items',exact:true}).click();
+  await page.getByRole('link',{name:'A community desk ready for another story',exact:true}).waitFor({state:'hidden'});
+  await page.goto(origin+'/marketplace?category=Furniture&location=Kampala&maxPrice=100000');
+  await page.getByRole('button',{name:'Save search',exact:true}).click();
+  await page.getByText('Search saved. Reopen it from Saved items & searches.',{exact:true}).waitFor();
+  await page.goto(origin+'/saved');
+  await page.locator('.saved-search-item>a').click();
+  await page.waitForURL('**/marketplace?**');
+  assert.equal(new URL(page.url()).searchParams.get('location'),'Kampala');
+  console.log('PASS: browser favorites persist after reload and saved searches restore filters.');
   await page.goto(origin+'/dashboard');await page.getByRole('button',{name:'Edit profile',exact:true}).click();
   await page.locator('#profile-name').fill('Browser Seller');await page.getByRole('button',{name:'Save profile'}).click();
   await page.getByRole('dialog').waitFor({state:'hidden'});
@@ -158,28 +223,6 @@ try {
   }
   await browser.close();browser=undefined;
  }
- async function runSeed(storeImages=false) {
-  const child=spawn(process.execPath,['--import','tsx','scripts/seed.ts',...(storeImages?['--store-images']:[])],{env:{...process.env,MONGODB_URI:uri,SEED_PASSWORD:'integration-demo-private-password'},stdio:['ignore','pipe','pipe']});
-  let output='';child.stdout.on('data',data=>{output+=data;});child.stderr.on('data',data=>{output+=data;});
-  await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error(`Seed failed: ${output}`)));});
-  console.log(output);
- }
- const setup=spawn(process.execPath,['--import','tsx','scripts/setup-admin.ts'],{env:{...process.env,MONGODB_URI:uri,ADMIN_EMAIL:'owner@example.test',ADMIN_PASSWORD:'prototype-admin-123'},stdio:'ignore'});
- await new Promise((resolve,reject)=>{setup.on('error',reject);setup.on('exit',code=>code===0?resolve():reject(new Error(`Admin setup exit ${code}`)));});
- const owner=await request('/api/auth/login',{method:'POST',body:{email:'owner@example.test',password:'prototype-admin-123'}});
- assert.equal(owner.data.user.role,'admin');
- console.log('PASS: configured admin account can sign in.');
- await runSeed();
- const counts=await Promise.all(['users','products','imageassets'].map(name=>db.db().collection(name).countDocuments()));
- const demo=await db.db().collection('products').findOne({title:'Compact study desk'});
- assert.ok(demo);
- await db.db().collection('products').updateOne({_id:demo._id},{$set:{title:'My edited demo desk'}});
- await runSeed();
- assert.deepEqual(await Promise.all(['users','products','imageassets'].map(name=>db.db().collection(name).countDocuments())),counts);
- assert.equal((await db.db().collection('products').findOne({_id:demo._id})).title,'My edited demo desk');
- await runSeed(true);
- assert.deepEqual(await Promise.all(['users','products'].map(name=>db.db().collection(name).countDocuments())),counts.slice(0,2));
- console.log('PASS: seed is repeatable, preserves listing edits, and supports catalog images stored in MongoDB.');
  await request('/api/auth/logout',{method:'POST',cookie:seller});
  console.log('Integration checks completed.');
 } catch(error) { console.error(logs); throw error; }

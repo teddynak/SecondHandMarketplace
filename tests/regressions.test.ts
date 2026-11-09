@@ -35,3 +35,13 @@ test('image sources accept uploaded paths and HTTPS links only', async () => {
  assert.equal(productSchema.safeParse({...input,images:Array(5).fill(input.images[0])}).success,false);
  assert.equal(productSchema.safeParse({...input,images:[input.images[0],input.images[0]]}).success,false);
 });
+
+test('saved searches canonicalize filters and reject invalid ranges', async () => {
+ const {canonicalSearch,searchLabel}=await import('../src/lib/search');
+ assert.equal(canonicalSearch('location=Kampala&maxPrice=50000&category=Books&page=4'),canonicalSearch('category=Books&maxPrice=50000&location=Kampala'));
+ assert.ok(!canonicalSearch('q=desk&page=2&redirect=https://example.test').includes('redirect'));
+ assert.throws(()=>canonicalSearch('minPrice=500&maxPrice=10'),/Minimum/);
+ assert.throws(()=>canonicalSearch('maxPrice=Infinity'),/Invalid price/);
+ assert.throws(()=>canonicalSearch('category=Unknown'),/Invalid category/);
+ assert.match(searchLabel('location=Kampala&category=Books'),/Books.*Kampala/);
+});

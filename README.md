@@ -2,7 +2,7 @@
 
 A professional, responsive second-hand community marketplace built with **Next.js 16 App Router, React 19, TypeScript, Tailwind CSS 4, MongoDB and Mongoose**.
 
-> **Status:** Tested source-code MVP. GitHub Actions passed production build, TypeScript, ESLint, ten automated unit/architecture checks, live CRUD checks against an isolated MongoDB replica set, and Chromium browser flows at six viewport widths on 9 November 2026. Configure your production database and authentication secret before running with real users.
+> **Status:** Tested source-code MVP. GitHub Actions passed production build, TypeScript, ESLint, eleven automated unit/architecture checks, live CRUD checks against an isolated MongoDB replica set, and Chromium browser flows at six viewport widths on 9 November 2026. Configure your production database and authentication secret before running with real users.
 
 ## Implemented features
 
@@ -205,3 +205,9 @@ npm run setup-admin
 ```
 
 This command creates that administrator directly; registration is not required. If the email already exists, it promotes that account and resets its password to `ADMIN_PASSWORD`, preserving its profile and listings. Run it again only when you intend to apply the configured password. Passwords are stored as bcrypt hashes. The script never prints them. Remove `ADMIN_PASSWORD` from a long-running public app's environment after setup if you no longer need the operator command; the login password remains in its database hash.
+
+## Discovery and saved collections
+
+The marketplace now supports location filtering and quick UGX budgets. Hearts save available listings to your account; `/saved` holds items and reusable searches. Saved searches keep your keyword and filters, but do not send notifications. Accounts can hold up to 200 saved item IDs and 20 saved searches. Sold/archived items disappear from the available collection. A seller name opens `/sellers/:id` with the seller’s public profile and available items. Product details include other available listings in the same category.
+
+See [MARKETPLACE_REVIEW.md](MARKETPLACE_REVIEW.md) for the comparison with Vinted, Carousell and Jiji Uganda and the resulting design decisions. These additions use MongoDB and the existing server environment variables; no new API keys are needed.

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Toaster } from 'sonner';
+import { SavedProvider } from '@/components/SavedProvider';
 import { AuthProvider } from '@/components/AuthProvider';
 import SiteHeader from '@/components/SiteHeader';
 import SiteFooter from '@/components/SiteFooter';
@@ -11,5 +12,5 @@ export const metadata: Metadata = {
  keywords: ['used items', 'second hand marketplace', 'reuse', 'community marketplace', 'Uganda'],
 };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
- return <html lang="en"><body><AuthProvider><SiteHeader/><main className="main-content">{children}</main><SiteFooter/><Toaster position="top-right" richColors closeButton /></AuthProvider></body></html>;
+ return <html lang="en"><body><AuthProvider><SavedProvider><SiteHeader/><main className="main-content">{children}</main><SiteFooter/><Toaster position="top-right" richColors closeButton /></SavedProvider></AuthProvider></body></html>;
 }

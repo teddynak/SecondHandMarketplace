@@ -18,6 +18,7 @@ export async function GET(request: NextRequest) {
   await connectDb();
   const params = request.nextUrl.searchParams;
   const query = (params.get('q') ?? '').trim().slice(0, 100);
+  const location = (params.get('location') ?? '').trim().slice(0,80);
   const category = params.get('category') ?? '';
   const condition = params.get('condition') ?? '';
   const rawMin = params.get('minPrice'); const rawMax = params.get('maxPrice');
@@ -29,6 +30,7 @@ export async function GET(request: NextRequest) {
    const safe = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
    filter.$or = [{ title: { $regex: safe, $options: 'i' } }, { description: { $regex: safe, $options: 'i' } }, { location: { $regex: safe, $options: 'i' } }];
   }
+  if (location) filter.location = { $regex: location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' };
   if (CATEGORIES.includes(category as (typeof CATEGORIES)[number])) filter.category = category;
   if (CONDITIONS.includes(condition as (typeof CONDITIONS)[number])) filter.condition = condition;
   const price: Record<string, number> = {};

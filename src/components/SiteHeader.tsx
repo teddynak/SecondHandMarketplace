@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { ArrowRight, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, UserRound, X } from 'lucide-react';
+import { ArrowRight, Heart, LayoutDashboard, LogOut, Menu, Plus, ShieldCheck, UserRound, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import { api, initials } from '@/lib/client';
@@ -22,7 +22,7 @@ export default function SiteHeader() {
    <Link href="/how-it-works" className={navClass('/how-it-works')}>How it works</Link>
    <Link href="/about" className={navClass('/about')}>Our mission</Link>
   </nav>
-  <div className="header-actions desktop-actions">
+  <div className="header-actions desktop-actions"><Link href="/saved" className="icon-btn" aria-label="Saved items" title="Saved items"><Heart size={20}/></Link>
    {user ? <>
      <Link className="header-profile" href="/dashboard" title="Your dashboard"><span className="avatar avatar-small">{initials(user.name)}</span><span className="hide-small">My dashboard</span></Link>
      {user.role === 'admin' && <Link href="/admin" className="icon-btn" title="Admin dashboard" aria-label="Admin dashboard"><ShieldCheck size={20}/></Link>}
@@ -33,7 +33,7 @@ export default function SiteHeader() {
   <button className="mobile-menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen(v => !v)}>{open ? <X/> : <Menu/>}</button>
  </div>
  {open && <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation" onClick={() => setOpen(false)}>
-  <Link href="/marketplace">Explore marketplace</Link><Link href="/how-it-works">How it works</Link><Link href="/about">Our mission</Link>
+  <Link href="/marketplace">Explore marketplace</Link><Link href="/saved"><Heart size={18}/> Saved items & searches</Link><Link href="/how-it-works">How it works</Link><Link href="/about">Our mission</Link>
   {user ? <><Link href="/dashboard"><LayoutDashboard size={18}/> My dashboard</Link>{user.role === 'admin' && <Link href="/admin"><ShieldCheck size={18}/> Admin dashboard</Link>}
   <button onClick={(event) => { event.stopPropagation(); void logout(); }}><LogOut size={18}/> Sign out</button></> : <><Link href="/login"><UserRound size={18}/> Log in</Link><Link href="/register">Create account</Link></>}
   <Link className="btn btn-primary" href="/sell"><Plus size={18}/> Sell an item</Link>
