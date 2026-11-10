@@ -7,3 +7,11 @@ export async function userRateLimit(userId:string,action:string,limit:number,sec
  const bucket=await RateBucket.findOneAndUpdate({_id},{$inc:{count:1},$setOnInsert:{expiresAt:new Date((window+2)*seconds*1000)}},{upsert:true,new:true});
  if(bucket.count>limit)throw new AppError('Too many attempts. Please wait before trying again.',429);
 }
+
+// This header must be overwritten by the trusted hosting proxy. Missing IPs share a bucket.
+export async function requestRateLimit(request:Request,action:string,limit:number,seconds=60){
+ const {createHash}=await import('node:crypto');
+ const ip=(request.headers.get('x-real-ip')||request.headers.get('x-forwarded-for')?.split(',')[0]||'unknown').trim().slice(0,100);
+ const identity=createHash('sha256').update(`${process.env.AUTH_SECRET||'unconfigured'}:${ip}`).digest('hex');
+ await userRateLimit(identity,action,limit,seconds);
+}

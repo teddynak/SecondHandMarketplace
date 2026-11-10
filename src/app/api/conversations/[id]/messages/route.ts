@@ -6,6 +6,8 @@ import {apiError,AppError} from '@/lib/errors';
 import {messageDto,otherParticipant,participantConversation} from '@/lib/messaging';
 import {sendMessageSchema} from '@/lib/messaging-validation';
 import {userRateLimit} from '@/lib/rate-limit';
+import Notification from '@/models/Notification';
+import {notify} from '@/lib/notifications';
 import Conversation from '@/models/Conversation';
 import Message from '@/models/Message';
 import Product from '@/models/Product';
@@ -19,7 +21,7 @@ export async function POST(request:NextRequest,{params}:Context){try{
  // Stable client IDs make retrying an ambiguous network failure safe.
  const existing=await Message.findOne({conversationId:id,clientId:input.clientId});
  if(existing){if(String(existing.senderId)!==userId||existing.text!==input.text)throw new AppError('Message identifier is already in use.',409);return NextResponse.json({message:messageDto(existing)});}
- await userRateLimit(userId,'send-message',30);await Message.init();
+ await userRateLimit(userId,'send-message',30);await Message.init();await Notification.init();
  const otherId=otherParticipant(conversation,userId);
  const sent=await mongoose.connection.transaction(async session=>{
   const listing=await Product.findOne({_id:conversation.listingId,status:'available',condition:{$ne:'New'},moderationHidden:{$ne:true},sellerSuspended:{$ne:true}}).session(session);
@@ -29,6 +31,7 @@ export async function POST(request:NextRequest,{params}:Context){try{
   const updated=await Conversation.findByIdAndUpdate(id,{$inc:{sequence:1},$set:{lastMessage:input.text.slice(0,160),lastActivityAt:new Date()}},{new:true,session});
   if(!updated)throw new AppError('Conversation not found.',404);
   const [message]=await Message.create([{conversationId:conversation._id,senderId:user._id,recipientId:otherId,text:input.text,clientId:input.clientId,sequence:updated.sequence}],{session});
+  await notify(otherId,`message:${message._id}`,'New message on ReUse',input.text,`/inbox/${id}`,'message',session);
   return message;
  });
  return NextResponse.json({message:messageDto(sent)},{status:201});

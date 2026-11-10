@@ -1,3 +1,5 @@
+import {createServer} from 'node:http';
+import {verifyAccounts,verifyAccountsBrowser} from './account-integration.mjs';
 import assert from 'node:assert/strict';
 import {verifyModeration,verifyModerationBrowser} from './moderation-integration.mjs';
 import {verifyMessaging,verifyMessagingBrowser} from './messaging-integration.mjs';
@@ -11,9 +13,13 @@ const mongo = await MongoMemoryReplSet.create({ binary: { version: process.env.M
 const uri = mongo.getUri('reuse_integration');
 const port = process.env.TEST_PORT || '3100';
 const origin = `http://localhost:${port}`;
+const mail={messages:[],fail:false};
+const mailServer=createServer(async(req,res)=>{let raw='';for await(const chunk of req)raw+=chunk;res.setHeader('Content-Type','application/json');if(mail.fail){res.statusCode=503;res.end(JSON.stringify({error:'Isolated provider failure'}));return;}mail.messages.push(JSON.parse(raw));res.end(JSON.stringify({id:'isolated-email-'+mail.messages.length}));});
+await new Promise(resolve=>mailServer.listen(0,'127.0.0.1',resolve));
+const emailApi=`http://127.0.0.1:${mailServer.address().port}/emails`;
 let logs = '';
 const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', port], {
- env: { ...process.env, MONGODB_URI: uri, AUTH_SECRET: 'isolated-integration-secret-with-at-least-32-characters', NODE_ENV: 'production' },
+ env: { ...process.env, EMAIL_PROVIDER:'resend',RESEND_API_KEY:'isolated-email-key',EMAIL_FROM:'ReUse <noreply@example.test>',EMAIL_API_URL:emailApi,APP_URL:origin,MONGODB_URI: uri, AUTH_SECRET: 'isolated-integration-secret-with-at-least-32-characters', NODE_ENV: 'production' },
  stdio: ['ignore','pipe','pipe'],
 });
 server.stdout.on('data', data => { logs += data; });
@@ -124,6 +130,7 @@ try {
  console.log('PASS: linked and uploaded images work together, unsafe links and unauthorized edits are rejected.');
  const messaging=await verifyMessaging({request,db,seller,other,admin,item,linked});
  await verifyModeration({request,seller,other,admin,linked,messaging,created});
+ const security=await verifyAccounts({request,db,mail,seller,other,admin});
  console.log('PASS: registration, login, image upload/read, listing CRUD, search, ownership, role upgrade, admin rejection/approval, archived visibility, sales, payment status and profile updates.');
  // A visible item for responsive UI checks.
  await request('/api/items',{method:'POST',cookie:seller,body:{...item,title:'A community desk ready for another story'},status:201});
@@ -326,6 +333,7 @@ try {
   for(const width of widths){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Admin overflow at ${width}px`);}
   await verifyMessagingBrowser({page,context,origin,request,db,seller,other,admin,linked,messaging,capture});
   await verifyModerationBrowser({page,context,origin,admin,other,linked,sellerId:messaging.sellerId,capture});
+  await verifyAccountsBrowser({page,context,origin,mail,security,capture,seller});
   console.log('PASS: browser forms create, read, edit, request removal and admin archive.');
   console.log('PASS: responsive overflow checks at 320, 375, 768, 1024, 1440 and 1920px; mobile menu/filters and profile form interactions.');
   if(process.env.SCREENSHOT_DIR) {
@@ -340,5 +348,5 @@ try {
 finally {
  if(browser)await browser.close();
  server.kill('SIGTERM');
- await db.close();await mongo.stop();
+ await db.close();await mongo.stop();await new Promise(resolve=>mailServer.close(resolve));
 }

@@ -238,3 +238,9 @@ No new environment variables are required. Use Atlas or a MongoDB replica set, w
 ## Administration and moderation
 
 The admin dashboard now includes member/listing search, reasoned account suspension/restoration, listing moderation holds, listing/member reports, conversation evidence review and an audit history. Confirmation dialogs protect sensitive decisions. Restoring an account or visibility does not reset sold, archived or other moderation states. See [PHASE_3.md](PHASE_3.md). Existing records are preserved; no new environment variables are needed.
+
+## Account security and email
+
+Open **Account security** from the dashboard to change a password or request email verification. **Forgot your password?** on login starts recovery. Password changes/resets sign out all previous sessions. In-app message/moderation notifications work without an email service.
+
+To enable email links, set `APP_URL` to your canonical HTTPS origin, `EMAIL_PROVIDER=resend`, `RESEND_API_KEY` to a private sending key, and `EMAIL_FROM` to an address at your domain verified in Resend. Configure that domain's DNS in Resend first. The provider's request acceptance is not proof of delivery. Without configuration, the interface reports that email is unavailable. Recovery responses deliberately never confirm account existence or delivery. See [PHASE_4.md](PHASE_4.md) for token rules, rate limits, tests and configuration boundaries. Saved-search email alerts and browser push remain disabled.

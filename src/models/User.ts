@@ -1,12 +1,12 @@
 import mongoose, { Schema, models, model } from 'mongoose';
 export interface IUser {
- activityVersion:number;accountStatus:'active'|'suspended';suspensionReason:string;
+ sessionVersion:number;emailVerifiedAt:Date|null;activityVersion:number;accountStatus:'active'|'suspended';suspensionReason:string;
  name: string; email: string; passwordHash: string; phone: string; location: string;
  role: 'buyer'|'seller'|'admin'; favoriteIds: mongoose.Types.ObjectId[]; savedSearches: {id:string;label:string;params:string}[]; createdAt: Date; updatedAt: Date;
 }
 const SavedSearchSchema = new Schema({ id: {type:String,required:true}, label: {type:String,required:true}, params: {type:String,required:true} }, {_id:false});
 const UserSchema = new Schema<IUser>({
- activityVersion:{type:Number,default:0},accountStatus:{type:String,enum:['active','suspended'],default:'active'},suspensionReason:{type:String,default:''},
+ sessionVersion:{type:Number,default:0},emailVerifiedAt:{type:Date,default:null},activityVersion:{type:Number,default:0},accountStatus:{type:String,enum:['active','suspended'],default:'active'},suspensionReason:{type:String,default:''},
  name: { type: String, required: true, trim: true },
  email: { type: String, required: true, lowercase: true, trim: true, unique: true },
  passwordHash: { type: String, required: true, select: false },

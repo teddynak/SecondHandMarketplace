@@ -1,6 +1,6 @@
 export const CATEGORIES = ['Clothing','Electronics','Books','Home & Living','Furniture','Sports','Other'] as const;
 export type Category = (typeof CATEGORIES)[number];
-export type PublicUser = {accountStatus?:'active'|'suspended';suspensionReason?:string; id: string; name: string; email: string; phone: string; location: string; role: 'buyer'|'seller'|'admin'; createdAt: string };
+export type PublicUser = {emailVerified?:boolean;accountStatus?:'active'|'suspended';suspensionReason?:string; id: string; name: string; email: string; phone: string; location: string; role: 'buyer'|'seller'|'admin'; createdAt: string };
 export type Product = {
  id: string; title: string; description: string; category: Category; price: number;
  publiclyVisible?:boolean;moderationHidden?:boolean;moderationReason?:string;sellerSuspended?:boolean;usedOnlyEligible?: boolean; images: string[]; sellerId: string; sellerName: string;

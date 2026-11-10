@@ -95,3 +95,20 @@ test('moderation decisions require a target, known action and a real reason',asy
  assert.equal(moderationSchema.safeParse({action:'suspend',targetId,reason:'Short'}).success,false);
  assert.equal(entityReportSchema.safeParse({kind:'user',targetId,reason:'A clear report for an administrator.'}).success,true);
 });
+
+
+test('account links require 256-bit tokens and respect existing password limits',async()=>{
+ const {resetPasswordSchema,tokenSchema}=await import('../src/lib/account-validation');
+ assert.equal(tokenSchema.safeParse('a'.repeat(64)).success,true);
+ assert.equal(tokenSchema.safeParse('a'.repeat(63)).success,false);
+ assert.equal(resetPasswordSchema.safeParse({token:'a'.repeat(64),newPassword:'😀'.repeat(20)}).success,false);
+});
+test('email configuration fails honestly and rejects unsafe public origins',async()=>{
+ const {emailConfiguration}=await import('../src/lib/email');
+ const keys=['EMAIL_PROVIDER','RESEND_API_KEY','EMAIL_FROM','APP_URL','EMAIL_API_URL'];const saved=Object.fromEntries(keys.map(key=>[key,process.env[key]]));
+ try{for(const key of keys)delete process.env[key];assert.throws(emailConfiguration,/not configured/);
+ Object.assign(process.env,{EMAIL_PROVIDER:'resend',RESEND_API_KEY:'unit-test-key',EMAIL_FROM:'noreply@example.test',APP_URL:'https://reuse.example.test'});assert.equal(emailConfiguration().origin,'https://reuse.example.test');
+ process.env.APP_URL='http://public.example.test';assert.throws(emailConfiguration,/HTTPS/);
+ process.env.APP_URL='https://reuse.example.test';process.env.EMAIL_API_URL='http://127.0.0.1:9999/emails';assert.throws(emailConfiguration,/Invalid email/);
+ }finally{for(const key of keys){if(saved[key]===undefined)delete process.env[key];else process.env[key]=saved[key];}}
+});

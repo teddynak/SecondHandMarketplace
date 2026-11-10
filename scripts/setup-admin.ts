@@ -15,7 +15,7 @@ async function main() {
  try {
   await User.init();
   const passwordHash=await bcrypt.hash(password,12);
-  const result=await User.updateOne({email},{$set:{role:'admin',passwordHash},$setOnInsert:{name:'Marketplace Administrator',phone:'+256 000 000 000',location:'Kampala'}},{upsert:true,runValidators:true});
+  const result=await User.updateOne({email},{$set:{role:'admin',passwordHash},$inc:{sessionVersion:1},$setOnInsert:{name:'Marketplace Administrator',phone:'+256 000 000 000',location:'Kampala'}},{upsert:true,runValidators:true});
   console.log(`${result.upsertedCount?'Created':'Updated'} administrator: ${email}`);
   console.log('Sign in with ADMIN_PASSWORD. This command also resets the password of an existing account with that email.');
  }finally{await mongoose.disconnect();}

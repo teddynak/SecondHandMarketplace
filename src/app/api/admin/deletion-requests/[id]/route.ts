@@ -4,6 +4,8 @@ import { apiError, AppError } from '@/lib/errors';
 import { assertSameOrigin, jsonBody, validObjectId } from '@/lib/security';
 import { decisionSchema } from '@/lib/validators';
 import mongoose from 'mongoose';
+import Notification from '@/models/Notification';
+import {notify} from '@/lib/notifications';
 import AuditEvent from '@/models/AuditEvent';
 import Product from '@/models/Product';
 import DeletionRequest from '@/models/DeletionRequest';
@@ -17,7 +19,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   if (!validObjectId(id)) throw new AppError('Request not found.', 404);
   const { decision, adminNote } = decisionSchema.parse(await jsonBody(request));
   // The decision and archive must commit together, including competing admin reviews.
-  await AuditEvent.init();
+  await AuditEvent.init();await Notification.init();
   await mongoose.connection.transaction(async session => {
    const record = await DeletionRequest.findById(id).session(session);
    if (!record) throw new AppError('Request not found.', 404);
@@ -30,7 +32,8 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
    }
    record.status = decision; record.adminNote = adminNote || ''; record.reviewedBy = admin._id; record.reviewedAt = new Date();
    await record.save({ session });
-   await AuditEvent.create([{actorId:admin._id,action:'removal-'+decision,targetId:id,reason:adminNote||'Reviewed seller-requested listing removal.',before:'pending',after:decision}],{session});
+   const [event]=await AuditEvent.create([{actorId:admin._id,action:'removal-'+decision,targetId:id,reason:adminNote||'Reviewed seller-requested listing removal.',before:'pending',after:decision}],{session});
+   await notify(String(record.requestedBy),`moderation:${event._id}`,`Listing removal ${decision}`,adminNote||`Your removal request was ${decision}.`,'/dashboard','moderation',session);
   });
   return NextResponse.json({ ok: true, status: decision });
  } catch (error) { return apiError(error); }

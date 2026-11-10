@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
 import { api, initials } from '@/lib/client';
 import Brand from './Brand';
+import NotificationLink from './NotificationLink';
 import InboxLink from './InboxLink';
 export default function SiteHeader() {
  const menuRef=useRef<HTMLButtonElement>(null);
@@ -26,7 +27,7 @@ export default function SiteHeader() {
   </nav>
   <div className="header-actions desktop-actions"><Link href="/saved" className="icon-btn" aria-label="Saved items" title="Saved items"><Heart size={20}/></Link>
    {user ? <>
-     <InboxLink key={user.id}/>
+     <InboxLink key={user.id}/><NotificationLink key={`notifications:${user.id}`}/>
      <Link className="header-profile" href="/dashboard" title="Your dashboard"><span className="avatar avatar-small">{initials(user.name)}</span><span className="hide-small">My dashboard</span></Link>
      {user.role === 'admin' && <Link href="/admin" className="icon-btn" title="Admin dashboard" aria-label="Admin dashboard"><ShieldCheck size={20}/></Link>}
      <button className="icon-btn" onClick={logout} aria-label="Sign out" title="Sign out"><LogOut size={19}/></button>
@@ -37,7 +38,7 @@ export default function SiteHeader() {
  </div>
  {open && <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation" onKeyDown={event=>{if(event.key==='Escape'){setOpen(false);menuRef.current?.focus();}}} onClick={() => setOpen(false)}>
   <Link href="/marketplace">Explore marketplace</Link><Link href="/saved"><Heart size={18}/> Saved items & searches</Link><Link href="/how-it-works">Help centre</Link><Link href="/about">About & mission</Link>
-  {user ? <><InboxLink key={user.id} mobile/><Link href="/dashboard"><LayoutDashboard size={18}/> My dashboard</Link>{user.role === 'admin' && <Link href="/admin"><ShieldCheck size={18}/> Admin dashboard</Link>}
+  {user ? <><InboxLink key={user.id} mobile/><NotificationLink key={`notifications:${user.id}`} mobile/><Link href="/dashboard"><LayoutDashboard size={18}/> My dashboard</Link>{user.role === 'admin' && <Link href="/admin"><ShieldCheck size={18}/> Admin dashboard</Link>}
   <button onClick={(event) => { event.stopPropagation(); void logout(); }}><LogOut size={18}/> Sign out</button></> : <><Link href="/login"><UserRound size={18}/> Log in</Link><Link href="/register">Create account</Link></>}
   <Link className="btn btn-primary" href="/sell"><Plus size={18}/> Sell an item</Link>
  </nav>}
