@@ -73,3 +73,15 @@ test('legacy condition filters are omitted when reopening a saved search',async(
  assert.equal(canonicalSearch('q=table&condition=New&location=Kampala'),'q=table&location=Kampala');
  assert.ok(!searchLabel(canonicalSearch('condition=Good&category=Furniture')).includes('Good'));
 });
+
+
+test('messages require text and a stable UUID and bound report evidence input',async()=>{
+ const {sendMessageSchema,reportConversationSchema,readMessagesSchema}=await import('../src/lib/messaging-validation');
+ const clientId='65df245e-bd41-4b8e-a77f-015b47c56e55';
+ assert.equal(sendMessageSchema.parse({text:'  Is it available?  ',clientId}).text,'Is it available?');
+ for(const text of ['   ','x'.repeat(2001)])assert.equal(sendMessageSchema.safeParse({text,clientId}).success,false);
+ assert.equal(sendMessageSchema.safeParse({text:'Hi',clientId:'wrong'}).success,false);
+ assert.equal(reportConversationSchema.safeParse({conversationId:'0123456789abcdef01234567',reason:'Short'}).success,false);
+ assert.equal(reportConversationSchema.safeParse({conversationId:'invalid',reason:'A detailed report reason'}).success,false);
+ for(const through of [-1,0,1.5,Infinity])assert.equal(readMessagesSchema.safeParse({through}).success,false);
+});

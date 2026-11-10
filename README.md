@@ -228,3 +228,9 @@ ReUse accepts only already-used items. The condition selector, listing grades, c
 Cards are compact: the homepage shows six columns at desktop widths and seven on very wide screens, while the marketplace uses five/six columns with its sidebar. Tablets and phones retain smaller column counts and 44px save controls.
 
 `/how-it-works` is now the searchable Help centre with topic filters and keyboard-accessible FAQs. `/about` is one combined About us & our mission page with in-page sections. The navigation and footer use these two destinations; there is no separate mission page. No new environment variables or database reset is required.
+
+## In-app conversations
+
+Use **Message on ReUse** from an available listing, then find replies in **Inbox**. Conversations and plain-text messages are stored in MongoDB and restricted to their buyer and seller. Blocking, conversation reporting and an administrator report-review queue are included. WhatsApp and phone contact remain available. Sold and archived listing conversations keep their history but become read-only.
+
+No new environment variables are required. Use Atlas or a MongoDB replica set, with permission to create the additive collections and unique indexes. See [PHASE_2.md](PHASE_2.md) for polling intervals, message/report limits, privacy boundaries and tests. In-app messaging does not send email or browser push notifications.

@@ -1,0 +1,5 @@
+import mongoose,{Schema,model,models,Types} from 'mongoose';
+export interface IReport {reporterId:Types.ObjectId;reportedUserId:Types.ObjectId;conversationId:Types.ObjectId;reason:string;status:'pending'|'reviewed';adminNote:string;reviewedBy?:Types.ObjectId;reviewedAt?:Date;evidence:{senderId:string;text:string;createdAt:Date}[];createdAt:Date}
+const schema=new Schema<IReport>({reporterId:{type:Schema.Types.ObjectId,required:true},reportedUserId:{type:Schema.Types.ObjectId,required:true},conversationId:{type:Schema.Types.ObjectId,required:true},reason:{type:String,required:true,maxlength:1000},status:{type:String,enum:['pending','reviewed'],default:'pending'},adminNote:{type:String,default:''},reviewedBy:{type:Schema.Types.ObjectId},reviewedAt:Date,evidence:{type:[new Schema({senderId:String,text:String,createdAt:Date},{_id:false})],default:[]}},{timestamps:true});
+schema.index({reporterId:1,conversationId:1},{unique:true,partialFilterExpression:{status:'pending'}});schema.index({status:1,createdAt:-1});
+export default (models.Report as mongoose.Model<IReport>)||model<IReport>('Report',schema);

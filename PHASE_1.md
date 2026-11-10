@@ -6,12 +6,12 @@ This phase preserves authentication, MongoDB storage, existing listing permissio
 
 - Use **Move earlier**, **Move later** or **Make cover** on photos. The first photo is the cover, and its position is persisted in the existing images array. Both image links and database uploads remain supported.
 - **Review listing** validates the form and opens a draft preview. **Publish listing** is the explicit write action. Editing uses **Review changes → Save changes**.
-- The preview shows the photos in order, price, category, condition, location, seller contact and description. Reviewing or closing the preview does not create or update a listing. Editing fields remains in the current form; drafts are not persisted across reloads.
+- The preview shows the photos in order, price, category, location, seller contact and description. Reviewing or closing the preview does not create or update a listing. Editing fields remains in the current form; drafts are not persisted across reloads.
 - Publication locks repeated clicks, keeps the reviewed payload stable, and displays API failures in the preview without erasing form data. This is not a guarantee of server-side idempotency after an ambiguous network interruption.
 
 ## Navigation, filters and feedback
 
-- A single filter form applies category, location, condition and price together. On mobile it opens in a native modal; closing/cancelling preserves the current URL and results.
+- A single filter form applies category, location and price together. On mobile it opens in a native modal; closing/cancelling preserves the current URL and results.
 - City shortcuts, labelled price inputs, range validation, active-filter chips and individual removal make applied filters visible.
 - Browsing errors have a retry action. Out-of-range page requests return the final available page rather than an incorrect empty feed.
 - Dashboard and item details explain available, sold, archived and pending-removal states. Sold/archived items retain their existing API visibility rules.

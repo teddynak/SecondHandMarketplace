@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowLeft, Check, CheckCircle2, Clock3, LoaderCircle, Package, ShieldCheck, Users, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/components/AuthProvider';
+import ConversationReports from '@/components/ConversationReports';
 import { Notice } from '@/components/Notice';
 import { api, niceDate } from '@/lib/client';
 import type { DeletionRequest } from '@/types';
@@ -24,5 +25,5 @@ export default function AdminPage() {
  <section className="admin-requests"><div className="dashboard-section-head"><div><h2>Listing removal requests</h2><p>Only administrators may approve or reject deletion requests.</p></div></div>
  {!data&&!error&&<div className="page-loading">Loading requests...</div>}{data?.requests.length===0&&<div className="empty-state"><CheckCircle2 size={40}/><h3>All caught up!</h3><p>There are no deletion requests to review.</p></div>}
  <div className="requests-list">{data?.requests.map(req=><article className="request-card" key={req.id}><div className="request-main"><div className="request-title-row"><h3>{req.productTitle}</h3><span className={`badge badge-${req.status}`}>{req.status}</span></div><p className="request-meta">Requested by {req.sellerName} ({req.sellerEmail}) · {niceDate(req.createdAt)}</p><div className="request-reason">“{req.reason}”</div></div><div className="request-actions"><Link href={`/items/${req.productId}`} className="btn btn-outline btn-small">View listing</Link>{req.status==='pending'&&<><button className="btn btn-outline btn-small" onClick={()=>void decide(req,'rejected')} disabled={!!busy}><X size={16}/> Reject</button><button className="btn btn-primary btn-small" onClick={()=>void decide(req,'approved')} disabled={!!busy}>{busy===req.id?<LoaderCircle className="spin" size={17}/>:<Check size={16}/>} Approve & archive</button></>}</div></article>)}</div>
- </section></div></div>;
+ </section><ConversationReports/></div></div>;
 }

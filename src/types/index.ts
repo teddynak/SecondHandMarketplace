@@ -10,3 +10,5 @@ export type Product = {
 };
 export type DeletionRequest = { id: string; productId: string; productTitle: string; sellerName: string; sellerEmail: string; requestedBy: string; reason: string; status: 'pending'|'approved'|'rejected'; adminNote?: string; createdAt: string; reviewedAt?: string };
 export type PaginatedProducts = { items: Product[]; page: number; pages: number; total: number };
+export type ConversationSummary={id:string;listingId:string;listingTitle:string;listingStatus:string;otherId:string;otherName:string;lastMessage:string;lastActivityAt:string;unread:number;blockedByMe:boolean;blocked:boolean;canSend:boolean;unavailableReason:string;sequence:number};
+export type ChatMessage={id:string;senderId:string;text:string;sequence:number;clientId:string;createdAt:string};
