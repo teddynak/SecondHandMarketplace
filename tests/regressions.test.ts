@@ -15,7 +15,7 @@ test('registration normalizes email and rejects bcrypt truncation', () => {
  assert.equal(registerSchema.safeParse({...input, password:'😀'.repeat(20)}).success, false);
 });
 test('listing prices respect the database minimum and whole shillings', () => {
- const input = {title:'Test item', description:'A useful description of this item.', category:'Clothing', condition:'Good', price:1, location:'Kampala', sellerPhone:'0771234567', images:[]};
+ const input = {title:'Test item', description:'A useful description of this item.', category:'Clothing', condition:'Used', price:1, location:'Kampala', sellerPhone:'0771234567', images:[]};
  assert.equal(productSchema.safeParse(input).success, true);
  for (const price of [0, 0.5, Infinity]) assert.equal(productSchema.safeParse({...input, price}).success, false);
 });
@@ -30,7 +30,7 @@ test('image sources accept uploaded paths and HTTPS links only', async () => {
  const { isImageSource } = await import('../src/lib/image-source');
  for (const source of ['/api/images/0123456789abcdef01234567', 'https://images.example.test/photo.jpg?size=large']) assert.equal(isImageSource(source),true);
  for (const source of ['javascript:alert(1)','data:image/svg+xml,test','http://images.example.test/a.jpg','//images.example.test/a.jpg','https://user:password@images.example.test/a.jpg','/api/images/not-an-id']) assert.equal(isImageSource(source),false);
- const input={title:'Test item',description:'A useful description of this item.',category:'Clothing',condition:'Good',price:1,location:'Kampala',sellerPhone:'0771234567',images:['https://images.example.test/a.jpg']};
+ const input={title:'Test item',description:'A useful description of this item.',category:'Clothing',condition:'Used',price:1,location:'Kampala',sellerPhone:'0771234567',images:['https://images.example.test/a.jpg']};
  assert.equal(productSchema.safeParse(input).success,true);
  assert.equal(productSchema.safeParse({...input,images:Array(5).fill(input.images[0])}).success,false);
  assert.equal(productSchema.safeParse({...input,images:[input.images[0],input.images[0]]}).success,false);
@@ -60,4 +60,16 @@ test('listing status explanations match available actions', async () => {
  assert.match(listingStatusDescription({status:'available',paymentStatus:'unpaid',deletionRequestStatus:'pending'}),/awaiting administrator review/);
  assert.match(listingStatusDescription({status:'sold',paymentStatus:'unpaid'}),/cannot be edited.*mark payment/);
  assert.match(listingStatusDescription({status:'archived',paymentStatus:'paid'}),/hidden from buyers/);
+});
+
+
+test('used-only listings default silently and explicitly new listings are rejected',()=>{
+ const input={title:'Used table',description:'A table that has been used for two years.',category:'Furniture',price:40000,location:'Kampala',sellerPhone:'0771234567',images:[]};
+ assert.equal(productSchema.parse(input).condition,'Used');
+ assert.equal(productSchema.safeParse({...input,condition:'New'}).success,false);
+});
+test('legacy condition filters are omitted when reopening a saved search',async()=>{
+ const {canonicalSearch,searchLabel}=await import('../src/lib/search');
+ assert.equal(canonicalSearch('q=table&condition=New&location=Kampala'),'q=table&location=Kampala');
+ assert.ok(!searchLabel(canonicalSearch('condition=Good&category=Furniture')).includes('Good'));
 });

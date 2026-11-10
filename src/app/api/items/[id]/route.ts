@@ -18,7 +18,7 @@ export async function GET(_request: NextRequest, { params }: RouteContext) {
   await connectDb();
   const product = await Product.findById(id);
   if (!product) throw new AppError('Product not found.', 404);
-  if (product.status !== 'available') {
+  if (product.status !== 'available' || product.condition === 'New') {
    const user = await currentUser();
    if (!user || (String(user._id) !== String(product.sellerId) && user.role !== 'admin')) throw new AppError('Product is no longer available.', 404);
   }

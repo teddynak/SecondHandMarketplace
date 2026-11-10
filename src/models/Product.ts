@@ -1,5 +1,5 @@
 import mongoose, { Schema, models, model, Types } from 'mongoose';
-import { CATEGORIES, CONDITIONS } from '@/types';
+import { CATEGORIES } from '@/types';
 export interface IProduct {
  title: string; description: string; category: string; price: number; condition: string;
  images: string[]; sellerId: Types.ObjectId; sellerName: string; sellerEmail: string;
@@ -9,7 +9,7 @@ export interface IProduct {
 const ProductSchema = new Schema<IProduct>({
  title: { type: String, required: true, trim: true }, description: { type: String, required: true },
  category: { type: String, enum: CATEGORIES, required: true }, price: { type: Number, min: 1, required: true },
- condition: { type: String, enum: CONDITIONS, required: true },
+ condition: { type: String, enum: ['Used','New','Like new','Good','Fair'], default: 'Used', required: true },
  images: { type: [String], default: [] },
  sellerId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
  sellerName: { type: String, required: true }, sellerEmail: { type: String, required: true },

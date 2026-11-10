@@ -6,7 +6,7 @@ import { assertSameOrigin, jsonBody } from '@/lib/security';
 import { apiError, AppError } from '@/lib/errors';
 import { canonicalSearch, searchLabel } from '@/lib/search';
 import User from '@/models/User';
-export async function GET(){try{const user=await requireUser();return NextResponse.json({searches:user.savedSearches});}catch(error){return apiError(error);}}
+export async function GET(){try{const user=await requireUser();return NextResponse.json({searches:user.savedSearches.map(search=>{const params=canonicalSearch(search.params);return {id:search.id,params,label:searchLabel(params)};})});}catch(error){return apiError(error);}}
 export async function POST(request:NextRequest){
  try{
   assertSameOrigin(request);const user=await requireUser();const input=z.object({params:z.string().max(1500)}).parse(await jsonBody(request));

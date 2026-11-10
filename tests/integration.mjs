@@ -46,11 +46,20 @@ try {
  photo.append('file',new Blob([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64'),Buffer.alloc(100)],{type:'image/png'}),'item.png');
  const upload=(await request('/api/uploads',{method:'POST',cookie:seller,body:photo,status:201})).data;
  const imageResponse=await fetch(`${origin}${upload.url}`); assert.equal(imageResponse.status,200); assert.equal(imageResponse.headers.get('content-type'),'image/png');
- const item={title:'Second hand desk',description:'A sturdy desk in good condition, ready for a new home.',category:'Furniture',condition:'Good',price:90000,location:'Kampala',sellerPhone:'0771234567',images:[upload.url]};
+ const item={title:'Second hand desk',description:'A sturdy desk in good condition, ready for a new home.',category:'Furniture',condition:'Used',price:90000,location:'Kampala',sellerPhone:'0771234567',images:[upload.url]};
  await request('/api/items',{method:'POST',body:item,status:401});
  await request('/api/items',{method:'POST',cookie:other,body:item,status:403});
  const created=(await request('/api/items',{method:'POST',cookie:seller,body:item,status:201})).data.item;
  assert.equal((await request('/api/me',{cookie:seller})).data.user.role,'seller');
+ assert.ok(!('condition' in created));
+ await request('/api/items',{method:'POST',cookie:seller,body:{...item,condition:'New'},status:400});
+ const legacyId=(await db.db().collection('products').insertOne({...item,title:'Legacy new item hidden by policy',condition:'New',sellerId:new (await import('mongodb')).ObjectId(created.sellerId),sellerName:'Seller',sellerEmail:'seller@example.test',status:'available',paymentStatus:'unpaid',createdAt:new Date(),updatedAt:new Date()})).insertedId;
+ assert.ok(!(await request('/api/items')).data.items.some(product=>product.id===String(legacyId)));
+ await request(`/api/items/${legacyId}`,{status:404});
+ assert.equal((await request(`/api/items/${legacyId}`,{cookie:seller})).data.item.usedOnlyEligible,false);
+ assert.ok(!(await request(`/api/sellers/${created.sellerId}`)).data.items.some(product=>product.id===String(legacyId)));
+ await db.db().collection('products').deleteOne({_id:legacyId});
+
  assert.equal((await request(`/api/items/${created.id}`)).data.item.title,item.title);
  const updated=(await request(`/api/items/${created.id}`,{method:'PATCH',cookie:seller,body:{price:75000,title:'Updated second hand desk'}})).data.item;
  assert.equal(updated.price,75000);
@@ -150,6 +159,10 @@ try {
     const dimensions=await page.evaluate(()=>({body:document.documentElement.scrollWidth,viewport:innerWidth}));
     assert.ok(dimensions.body<=dimensions.viewport+1,`Overflow at ${width}px on ${path}: ${JSON.stringify(dimensions)}`);
     if(path==='/') {
+     const columns=await page.locator('.discovery-feed .products-grid').evaluate(grid=>getComputedStyle(grid).gridTemplateColumns.split(' ').length);
+     assert.ok(columns>=(width>=1800?7:width>=1280?6:width>=768?4:2),`Not enough compact columns at ${width}px: ${columns}`);
+     assert.equal(await page.locator('.condition-chip').count(),0);
+
      const overlap=await page.locator('.category-card').evaluateAll(cards=>cards.some(card=>{
       const art=card.querySelector('.category-art').getBoundingClientRect();
       const title=card.querySelector('h3').getBoundingClientRect();
@@ -170,6 +183,7 @@ try {
   await page.keyboard.press('Escape');await filters.waitFor({state:'hidden'});
   assert.ok(!new URL(page.url()).searchParams.has('location'));
   await page.getByRole('button',{name:'Filters',exact:true}).click();filters=page.getByRole('dialog',{name:'Filters',exact:true});
+  assert.equal(await filters.getByLabel('Condition',{exact:true}).count(),0);
   assert.equal(await filters.getByLabel('Location',{exact:true}).inputValue(),'');
   await filters.getByLabel('Category',{exact:true}).selectOption('Furniture');
   await filters.getByRole('button',{name:'Kampala',exact:true}).click();
@@ -185,6 +199,23 @@ try {
   assert.equal(new URL(page.url()).searchParams.get('category'),'Furniture');
   console.log('PASS: mobile filters apply together, validate price ranges, cancel without changes and restore keyboard focus.');
 
+
+  await page.goto(origin+'/how-it-works');
+  await page.getByRole('searchbox',{name:'Search help articles'}).fill('photos');
+  const photoSummary=page.locator('summary').filter({hasText:'Can I upload photos or use image links?'});
+  await photoSummary.focus();await page.keyboard.press('Enter');
+  await page.getByText('Both are supported, with four photos total per listing.',{exact:false}).waitFor();
+  await page.getByRole('searchbox',{name:'Search help articles'}).fill('zzzxnevermatch');
+  await page.getByRole('heading',{name:'No matching answers yet'}).waitFor();
+  await page.getByRole('button',{name:'Show all help topics'}).click();
+  await page.getByRole('button',{name:'Selling',exact:true}).click();
+  assert.equal(await page.getByRole('button',{name:'Selling',exact:true}).getAttribute('aria-pressed'),'true');
+  await capture('help-centre-mobile');
+  await page.goto(origin+'/about');await page.locator('.about-anchors a[href="#our-mission"]').click();
+  assert.equal(new URL(page.url()).pathname,'/about');assert.equal(new URL(page.url()).hash,'#our-mission');
+  await page.getByRole('heading',{name:'A local place for second chances.'}).waitFor();
+  await capture('about-mission-mobile');
+  console.log('PASS: searchable help topics and keyboard FAQ expansion work; About us and mission stay on one page.');
   const token=seller.slice(seller.indexOf('=')+1);
   await context.addCookies([{name:'reuse_market_session',value:token,url:origin,httpOnly:true,sameSite:'Lax'}]);
   for(const width of widths) {
@@ -227,6 +258,7 @@ try {
   await page.getByRole('button',{name:'Add image link',exact:true}).click();
   await page.locator('input[type=file]').setInputFiles({name:'photo.png',mimeType:'image/png',buffer:Buffer.concat([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64'),Buffer.alloc(100)])});
   await page.locator('.upload-preview').nth(1).waitFor();
+  assert.equal(await page.getByLabel('Condition',{exact:true}).count(),0);
   await page.locator('#title').fill('Browser created chair');
   await page.locator('#description').fill('A comfortable chair created using the real listing form.');
   await page.locator('#price').fill('65000');

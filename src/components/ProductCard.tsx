@@ -7,7 +7,6 @@ import ProductImage from './ProductImage';
 export default function ProductCard({ product }: { product: Product }) {
  return <article className="product-card"><Link href={`/items/${product.id}`} className="product-photo-link" aria-label={`View ${product.title}`}>
   <ProductImage src={product.images[0]} alt={product.title} className="product-photo"/>
-  <span className="condition-chip">{product.condition}</span>
   <span className="photo-arrow"><ArrowUpRight size={17}/></span>
  </Link><SaveButton id={product.id} title={product.title} compact/><div className="product-card-body">
   <span className="product-category">{product.category}</span>

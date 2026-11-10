@@ -219,3 +219,12 @@ Use the photo arrow controls or **Make cover** to choose the image order. **Revi
 Mobile filters now apply together in an accessible modal, with location shortcuts and visible active filters. Escape/cancel preserves the current results. Native dashboard dialogs support focus containment and restoration. Available, sold, archived and pending-removal explanations clarify which actions are possible. Load errors offer retry controls.
 
 See [PHASE_1.md](PHASE_1.md) for implementation, validation and limitations. No new server environment variables are required. Phases 2–5 have not been implemented by this update.
+
+
+## Used-only catalogue and information pages
+
+ReUse accepts only already-used items. The condition selector, listing grades, condition filters and condition badges have been removed. New HTTP submissions default to the server-managed `Used` value; explicit `New` submissions are rejected. Legacy used-item grades remain readable without resetting records. Older records marked `New` stay in the database but are excluded from public browsing, seller storefronts and saved-available items; their owner sees why they are hidden. Editing a genuinely used item saves it under the updated used-only policy. Old saved-search condition parameters are ignored when reopening searches.
+
+Cards are compact: the homepage shows six columns at desktop widths and seven on very wide screens, while the marketplace uses five/six columns with its sidebar. Tablets and phones retain smaller column counts and 44px save controls.
+
+`/how-it-works` is now the searchable Help centre with topic filters and keyboard-accessible FAQs. `/about` is one combined About us & our mission page with in-page sections. The navigation and footer use these two destinations; there is no separate mission page. No new environment variables or database reset is required.

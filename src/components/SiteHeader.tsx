@@ -20,8 +20,8 @@ export default function SiteHeader() {
   <Brand />
   <nav className="desktop-nav" aria-label="Primary navigation">
    <Link href="/marketplace" className={navClass('/marketplace')}>Explore marketplace</Link>
-   <Link href="/how-it-works" className={navClass('/how-it-works')}>How it works</Link>
-   <Link href="/about" className={navClass('/about')}>Our mission</Link>
+   <Link href="/how-it-works" className={navClass('/how-it-works')}>Help centre</Link>
+   <Link href="/about" className={navClass('/about')}>About & mission</Link>
   </nav>
   <div className="header-actions desktop-actions"><Link href="/saved" className="icon-btn" aria-label="Saved items" title="Saved items"><Heart size={20}/></Link>
    {user ? <>
@@ -34,7 +34,7 @@ export default function SiteHeader() {
   <button ref={menuRef} className="mobile-menu-toggle" aria-expanded={open} aria-controls="mobile-navigation" aria-label={open ? 'Close menu' : 'Open menu'} onClick={() => setOpen(v => !v)}>{open ? <X/> : <Menu/>}</button>
  </div>
  {open && <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation" onKeyDown={event=>{if(event.key==='Escape'){setOpen(false);menuRef.current?.focus();}}} onClick={() => setOpen(false)}>
-  <Link href="/marketplace">Explore marketplace</Link><Link href="/saved"><Heart size={18}/> Saved items & searches</Link><Link href="/how-it-works">How it works</Link><Link href="/about">Our mission</Link>
+  <Link href="/marketplace">Explore marketplace</Link><Link href="/saved"><Heart size={18}/> Saved items & searches</Link><Link href="/how-it-works">Help centre</Link><Link href="/about">About & mission</Link>
   {user ? <><Link href="/dashboard"><LayoutDashboard size={18}/> My dashboard</Link>{user.role === 'admin' && <Link href="/admin"><ShieldCheck size={18}/> Admin dashboard</Link>}
   <button onClick={(event) => { event.stopPropagation(); void logout(); }}><LogOut size={18}/> Sign out</button></> : <><Link href="/login"><UserRound size={18}/> Log in</Link><Link href="/register">Create account</Link></>}
   <Link className="btn btn-primary" href="/sell"><Plus size={18}/> Sell an item</Link>

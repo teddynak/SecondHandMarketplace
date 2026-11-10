@@ -4,7 +4,7 @@ import type { IDeletionRequest } from '@/models/DeletionRequest';
 export function productDto(p: IProduct & { _id: unknown }, requestStatus: Product['deletionRequestStatus'] = null): Product {
  return {
   id: String(p._id), title: p.title, description: p.description, category: p.category as Product['category'],
-  price: p.price, condition: p.condition as Product['condition'], images: p.images,
+  price: p.price, usedOnlyEligible: p.condition !== 'New', images: p.images,
   sellerId: String(p.sellerId), sellerName: p.sellerName, sellerEmail: p.sellerEmail,
   sellerPhone: p.sellerPhone, location: p.location, status: p.status, paymentStatus: p.paymentStatus,
   createdAt: new Date(p.createdAt).toISOString(), updatedAt: new Date(p.updatedAt).toISOString(), deletionRequestStatus: requestStatus
