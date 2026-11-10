@@ -1,3 +1,4 @@
+import {verifyHelp} from './help-browser.mjs';
 import {verifyAbout} from './about-browser.mjs';
 import {verifyProduction} from './production-integration.mjs';
 import {createServer} from 'node:http';
@@ -221,17 +222,7 @@ try {
   console.log('PASS: mobile filters apply together, validate price ranges, cancel without changes and restore keyboard focus.');
 
 
-  await page.goto(origin+'/how-it-works');
-  await page.getByRole('searchbox',{name:'Search help articles'}).fill('photos');
-  const photoSummary=page.locator('summary').filter({hasText:'Can I upload photos or use image links?'});
-  await photoSummary.focus();await page.keyboard.press('Enter');
-  await page.getByText('Both are supported, with four photos total per listing.',{exact:false}).waitFor();
-  await page.getByRole('searchbox',{name:'Search help articles'}).fill('zzzxnevermatch');
-  await page.getByRole('heading',{name:'No matching answers yet'}).waitFor();
-  await page.getByRole('button',{name:'Show all help topics'}).click();
-  await page.getByRole('button',{name:'Selling',exact:true}).click();
-  assert.equal(await page.getByRole('button',{name:'Selling',exact:true}).getAttribute('aria-pressed'),'true');
-  await capture('help-centre-mobile');
+  await verifyHelp({page,origin,screenshotDir:process.env.SCREENSHOT_DIR});
   await page.goto(origin+'/about');await page.getByRole('navigation',{name:'About this page'}).locator('a[href="#our-mission"]').click();
   assert.equal(new URL(page.url()).pathname,'/about');assert.equal(new URL(page.url()).hash,'#our-mission');
   await page.getByRole('heading',{name:'A local place for second chances.'}).waitFor();

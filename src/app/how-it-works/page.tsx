@@ -1,3 +1,3 @@
 import HelpCentre from '@/components/HelpCentre';
-export const metadata={title:'Help centre — Buying & selling used items',description:'Find ReUse answers about buying, selling, photos, saved items, account access, pickup and safe exchanges.'};
+export const metadata={title:'Help centre — Buying, selling & account guidance',description:'Find practical ReUse answers about used listings, photos, messaging, account security, reports and safe exchanges in Uganda.'};
 export default function HowItWorksPage(){return <HelpCentre/>;}
