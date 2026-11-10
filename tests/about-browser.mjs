@@ -31,6 +31,9 @@ export async function verifyAbout({page,origin,screenshotDir}){
  const image=failedPhoto.locator('img');if(await image.count())await image.evaluate(img=>img.dispatchEvent(new Event('error')));
  await failedPhoto.getByRole('img',{name:'Books illustration: stories worth passing on'}).waitFor();const after=await failedPhoto.boundingBox();assert.ok(Math.abs(before.width-after.width)<1&&Math.abs(before.height-after.height)<1,'Image failure moved the hero layout');
  assert.equal(await failedPhoto.locator('img').count(),0);
+ assert.equal(await main.getByText('Another reader.',{exact:false}).isVisible(),false,'Photo caption must not overlap its fallback');
+ const fallbackLabel=await failedPhoto.locator('[role="img"] span').boundingBox();const inset=await page.locator('[data-about-photo="furniture"]').boundingBox();
+ assert.ok(fallbackLabel.x+fallbackLabel.width<=inset.x||fallbackLabel.y+fallbackLabel.height<=inset.y||fallbackLabel.y>=inset.y+inset.height,'Inset photo hides fallback text');
  if(screenshotDir){await page.evaluate(()=>window.scrollTo(0,0));await page.screenshot({path:`${screenshotDir}/about-image-fallback.png`});}
  await page.emulateMedia({reducedMotion:'no-preference'});
  // Follow actual primary links, including the unauthenticated seller entry point.
