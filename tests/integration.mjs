@@ -1,3 +1,4 @@
+import {verifyAbout} from './about-browser.mjs';
 import {verifyProduction} from './production-integration.mjs';
 import {createServer} from 'node:http';
 import {verifyAccounts,verifyAccountsBrowser} from './account-integration.mjs';
@@ -231,10 +232,11 @@ try {
   await page.getByRole('button',{name:'Selling',exact:true}).click();
   assert.equal(await page.getByRole('button',{name:'Selling',exact:true}).getAttribute('aria-pressed'),'true');
   await capture('help-centre-mobile');
-  await page.goto(origin+'/about');await page.locator('.about-anchors a[href="#our-mission"]').click();
+  await page.goto(origin+'/about');await page.getByRole('navigation',{name:'About this page'}).locator('a[href="#our-mission"]').click();
   assert.equal(new URL(page.url()).pathname,'/about');assert.equal(new URL(page.url()).hash,'#our-mission');
   await page.getByRole('heading',{name:'A local place for second chances.'}).waitFor();
   await capture('about-mission-mobile');
+  await verifyAbout({page,origin,screenshotDir:process.env.SCREENSHOT_DIR});
   console.log('PASS: searchable help topics and keyboard FAQ expansion work; About us and mission stay on one page.');
   const token=seller.slice(seller.indexOf('=')+1);
   await context.addCookies([{name:'reuse_market_session',value:token,url:origin,httpOnly:true,sameSite:'Lax'}]);
