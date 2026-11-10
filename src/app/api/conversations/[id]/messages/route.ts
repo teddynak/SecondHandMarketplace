@@ -28,7 +28,7 @@ export async function POST(request:NextRequest,{params}:Context){try{
   if(!listing)throw new AppError('This listing is no longer available. You can still read the conversation.',409);
   if(!await User.exists({_id:otherId,accountStatus:{$ne:'suspended'}}).session(session))throw new AppError('This member is no longer available.',409);
   if(await UserBlock.exists({$or:[{blockerId:userId,blockedId:otherId},{blockerId:otherId,blockedId:userId}]}).session(session))throw new AppError('Messages are unavailable while a block is in place.',403);
-  const updated=await Conversation.findByIdAndUpdate(id,{$inc:{sequence:1},$set:{lastMessage:input.text.slice(0,160),lastActivityAt:new Date()}},{new:true,session});
+  const updated=await Conversation.findByIdAndUpdate(id,{$inc:{sequence:1},$set:{lastMessage:input.text.slice(0,160),lastActivityAt:new Date()}},{returnDocument:'after',session});
   if(!updated)throw new AppError('Conversation not found.',404);
   const [message]=await Message.create([{conversationId:conversation._id,senderId:user._id,recipientId:otherId,text:input.text,clientId:input.clientId,sequence:updated.sequence}],{session});
   await notify(otherId,`message:${message._id}`,'New message on ReUse',input.text,`/inbox/${id}`,'message',session);

@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {createHash} from 'node:crypto';
+import {ObjectId} from 'mongodb';
+export async function verifyProduction({request,db,uri,origin,seller,linked,created}){
+ const sellerId=(await request('/api/me',{cookie:seller})).data.user.id;const ownerId=new ObjectId(sellerId);
+ const sample=Buffer.concat([Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScLbtAAAAABJRU5ErkJggg==','base64'),Buffer.alloc(100)]);
+ async function upload(status=201){const body=new FormData();body.append('file',new Blob([sample],{type:'image/png'}),'quota.png');return request('/api/uploads',{method:'POST',cookie:seller,body,status});}
+ const now=new Date();const filler=Array.from({length:50},()=>({_id:new ObjectId(),ownerId,contentType:'image/png',data:sample,createdAt:now,lastAttachedAt:now,sizeBytes:sample.length}));await db.db().collection('imageassets').insertMany(filler);await upload(409);await db.db().collection('imageassets').deleteMany({_id:{$in:filler.map(i=>i._id)}});
+ const byteFiller={_id:new ObjectId(),ownerId,contentType:'image/png',data:Buffer.alloc(8*1024*1024),createdAt:now,lastAttachedAt:now,sizeBytes:8*1024*1024};await db.db().collection('imageassets').insertOne(byteFiller);await upload(409);await db.db().collection('imageassets').deleteOne({_id:byteFiller._id});
+ await upload();
+ const old=new Date(Date.now()-14*86400000);const images=[0,1,2,3].map(()=>({_id:new ObjectId(),ownerId,contentType:'image/png',data:sample,createdAt:old,lastAttachedAt:old,sizeBytes:sample.length}));images[1].createdAt=now;images[2].lastAttachedAt=now;await db.db().collection('imageassets').insertMany(images);
+ const retainedPath=`/api/images/${images[3]._id}`;const record=await db.db().collection('products').insertOne({title:'Archived image retention fixture',description:'Only used for isolated cleanup verification.',category:'Furniture',condition:'Used',price:1000,images:[retainedPath],sellerId:ownerId,sellerName:'Seller',sellerEmail:'seller@example.test',sellerPhone:'0771234567',location:'Kampala',status:'archived',paymentStatus:'unpaid',createdAt:old,updatedAt:old});
+ async function clean(apply){const child=spawn(process.execPath,['--import','tsx','scripts/cleanup-images.ts',...(apply?['--apply']:[])],{env:{...process.env,MONGODB_URI:uri},stdio:['ignore','pipe','pipe']});let output='';child.stdout.on('data',d=>output+=d);child.stderr.on('data',d=>output+=d);await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(new Error(output)));});return JSON.parse(output.split('\n').find(line=>line.startsWith('{"mode"')));}
+ const dry=await clean(false);assert.equal(dry.mode,'dry-run');assert.equal(dry.deleted,0);assert.ok(await db.db().collection('imageassets').findOne({_id:images[0]._id}));
+ const applied=await clean(true);assert.equal(applied.deleted,1);assert.equal(await db.db().collection('imageassets').findOne({_id:images[0]._id}),null);for(const image of images.slice(1))assert.ok(await db.db().collection('imageassets').findOne({_id:image._id}));
+ await db.db().collection('products').deleteOne({_id:record.insertedId});await db.db().collection('imageassets').deleteMany({_id:{$in:images.map(i=>i._id)}});
+ const robots=await (await fetch(origin+'/robots.txt')).text();assert.ok(robots.includes('Disallow: /admin'));assert.ok(robots.includes('Sitemap: '+origin+'/sitemap.xml'));
+ const xml=await (await fetch(origin+'/sitemap.xml')).text();assert.ok(xml.includes('/items/'+linked.id));assert.ok(!xml.includes('/items/'+created.id));assert.ok(!xml.includes('/inbox'));
+ const html=await (await fetch(`${origin}/items/${linked.id}`,{headers:{'User-Agent':'Twitterbot'}})).text();assert.ok(html.includes('<title>Linked image listing'));assert.ok(html.includes('property="og:title"'));assert.ok(html.includes('application/ld+json'));assert.ok(html.includes('https://schema.org/UsedCondition'));assert.ok(html.includes('"priceCurrency":"UGX"'));assert.ok(!html.includes('seller@example.test'));
+ const hiddenHtml=await (await fetch(`${origin}/items/${created.id}`,{headers:{'User-Agent':'Twitterbot'}})).text();assert.ok(hiddenHtml.includes('noindex'));assert.ok(!hiddenHtml.includes('application/ld+json'));
+ const secure=await fetch(origin+'/login');assert.equal(secure.headers.get('x-frame-options'),'DENY');assert.equal(secure.headers.get('x-content-type-options'),'nosniff');
+ const ipIdentity=createHash('sha256').update('isolated-integration-secret-with-at-least-32-characters:unknown').digest('hex');const window=Math.floor(Date.now()/60000);const bucket=`browse:${ipIdentity}:${window}`;await db.db().collection('ratebuckets').updateOne({_id:bucket},{$set:{count:300,expiresAt:new Date(Date.now()+120000)}},{upsert:true});
+ const limited=await fetch(origin+'/api/items',{headers:{Origin:origin}});assert.equal(limited.status,429);assert.ok(Number(limited.headers.get('retry-after'))>0);await db.db().collection('ratebuckets').deleteOne({_id:bucket});
+ console.log('PASS: image count/byte quotas, dry-run and safe aged-orphan cleanup, retained archived/recent/touched images, public-only metadata/sitemap, security headers and shared browse limits.');
+}

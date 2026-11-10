@@ -27,6 +27,6 @@ export async function POST(request:NextRequest){try{
  if((await blockState(userId,String(listing.sellerId))).blocked)throw new AppError('You cannot start a conversation while a block is in place.',403);
  await userRateLimit(userId,'start-conversation',10);
  await Conversation.init();
- const conversation=await Conversation.findOneAndUpdate({listingId:listing._id,buyerId:user._id,sellerId:listing.sellerId},{$setOnInsert:{listingTitle:listing.title,lastActivityAt:new Date()}},{upsert:true,new:true});
+ const conversation=await Conversation.findOneAndUpdate({listingId:listing._id,buyerId:user._id,sellerId:listing.sellerId},{$setOnInsert:{listingTitle:listing.title,lastActivityAt:new Date()}},{upsert:true,returnDocument:'after'});
  return NextResponse.json({conversation:await conversationDto(conversation,userId)});
 }catch(error){return apiError(error);}}

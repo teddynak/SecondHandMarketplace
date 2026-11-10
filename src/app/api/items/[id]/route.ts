@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isStoredImage } from '@/lib/image-source';
-import { Types } from 'mongoose';
+import mongoose,{ Types } from 'mongoose';
 import { requireUser, currentUser } from '@/lib/auth';
 import { apiError, AppError } from '@/lib/errors';
 import { assertSameOrigin, jsonBody, validObjectId } from '@/lib/security';
 import { productUpdateSchema, saleSchema, markPaidSchema } from '@/lib/validators';
 import { productDto } from '@/lib/serialize';
+import {attachStoredImages} from '@/lib/image-storage';
+import {userRateLimit} from '@/lib/rate-limit';
 import Product from '@/models/Product';
 import ImageAsset from '@/models/ImageAsset';
 import { connectDb } from '@/lib/db';
@@ -31,6 +33,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
   const { id } = await params;
   if (!validObjectId(id)) throw new AppError('Product not found.', 404);
   const user = await requireUser();
+  await userRateLimit(String(user._id),'edit-listing',60,3600);
   const input = await jsonBody(request);
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new AppError('Invalid request body.');
   const obj = input as Record<string, unknown>;
@@ -54,6 +57,12 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     const ids = updates.images.filter(isStoredImage).map(path => new Types.ObjectId(path.split('/').pop()));
     const count = await ImageAsset.countDocuments({ _id: { $in: ids }, ownerId: user._id });
     if (count !== new Set(ids.map(String)).size) throw new AppError('Some images are not yours.', 403);
+   }
+   if(updates.images){
+    const saved=await mongoose.connection.transaction(async session=>{
+     const fresh=await Product.findOne({_id:id,sellerId:user._id,status:'available'}).session(session);if(!fresh)throw new AppError('This listing can no longer be edited.',409);
+     await attachStoredImages(updates.images!,String(user._id),session);Object.assign(fresh,updates);await fresh.save({session});return fresh;
+    });return NextResponse.json({item:productDto(saved)});
    }
    Object.assign(product, updates);
   }

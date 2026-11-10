@@ -112,3 +112,13 @@ test('email configuration fails honestly and rejects unsafe public origins',asyn
  process.env.APP_URL='https://reuse.example.test';process.env.EMAIL_API_URL='http://127.0.0.1:9999/emails';assert.throws(emailConfiguration,/Invalid email/);
  }finally{for(const key of keys){if(saved[key]===undefined)delete process.env[key];else process.env[key]=saved[key];}}
 });
+
+
+test('SEO origins reject credentials and JSON-LD cannot close its script element',async()=>{
+ const {siteOrigin,safeJsonLd}=await import('../src/lib/seo');const saved=process.env.APP_URL;
+ try{process.env.APP_URL='https://user:password@example.test';assert.equal(siteOrigin(),null);process.env.APP_URL='https://reuse.example.test';assert.equal(siteOrigin(),'https://reuse.example.test');assert.ok(!safeJsonLd({description:'</script><script>alert(1)</script>'}).includes('<'));}finally{if(saved===undefined)delete process.env.APP_URL;else process.env.APP_URL=saved;}
+});
+test('image storage configuration bounds account quotas',async()=>{
+ const {imageStorageLimits}=await import('../src/lib/image-storage');const count=process.env.IMAGE_MAX_PER_ACCOUNT,mb=process.env.IMAGE_MAX_TOTAL_MB;
+ try{process.env.IMAGE_MAX_PER_ACCOUNT='50';process.env.IMAGE_MAX_TOTAL_MB='64';assert.deepEqual(imageStorageLimits(),{count:50,bytes:64*1024*1024});process.env.IMAGE_MAX_PER_ACCOUNT='1';assert.throws(imageStorageLimits,/not configured/);}finally{for(const [key,value] of ([['IMAGE_MAX_PER_ACCOUNT',count],['IMAGE_MAX_TOTAL_MB',mb]] as const)){if(value===undefined)delete process.env[key];else process.env[key]=value;}}
+});

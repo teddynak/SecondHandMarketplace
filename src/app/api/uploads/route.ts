@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
 import { apiError, AppError } from '@/lib/errors';
 import { assertSameOrigin, boundedBody } from '@/lib/security';
+import mongoose from 'mongoose';
+import User from '@/models/User';
+import {imageStorageLimits} from '@/lib/image-storage';
+import {userRateLimit} from '@/lib/rate-limit';
 import ImageAsset from '@/models/ImageAsset';
 export const runtime = 'nodejs';
 function detectedImageType(buffer: Buffer): string | null {
@@ -14,6 +18,7 @@ export async function POST(request: NextRequest) {
  try {
   assertSameOrigin(request);
   const user = await requireUser();
+  await userRateLimit(String(user._id),'upload-image',20,3600);
   const length = Number(request.headers.get('content-length') || '0');
   if (length > 2_600_000) throw new AppError('Image must be smaller than 2 MB.', 413);
   const bytes = await boundedBody(request, 2_600_000);
@@ -24,7 +29,13 @@ export async function POST(request: NextRequest) {
   const buffer = Buffer.from(await file.arrayBuffer());
   const contentType = detectedImageType(buffer);
   if (!contentType) throw new AppError('Only JPEG, PNG, and WebP images are allowed.');
-  const image = await ImageAsset.create({ ownerId: user._id, contentType, data: buffer });
+  const limits=imageStorageLimits();await ImageAsset.init();
+  const image=await mongoose.connection.transaction(async session=>{
+   const owner=await User.findOneAndUpdate({_id:user._id,accountStatus:{$ne:'suspended'}},{$inc:{activityVersion:1}},{session,returnDocument:'after'});if(!owner)throw new AppError('Your account is suspended.',403);
+   const [usage]=await ImageAsset.aggregate([{$match:{ownerId:user._id}},{$group:{_id:null,count:{$sum:1},bytes:{$sum:{$ifNull:['$sizeBytes',{$binarySize:'$data'}]}}}}]).session(session);
+   if((usage?.count??0)>=limits.count||(usage?.bytes??0)+buffer.length>limits.bytes)throw new AppError('Your image storage limit is reached. Use HTTPS image links or ask the operator to review unused uploads.',409);
+   const [asset]=await ImageAsset.create([{ownerId:user._id,contentType,data:buffer,sizeBytes:buffer.length}],{session});return asset;
+  });
   return NextResponse.json({ url: `/api/images/${image._id}` }, { status: 201 });
  } catch (error) { return apiError(error); }
 }

@@ -1,3 +1,4 @@
+import {userRateLimit} from '@/lib/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
 import { requireUser } from '@/lib/auth';
 import { apiError, AppError } from '@/lib/errors';
@@ -10,6 +11,7 @@ export async function POST(request: NextRequest) {
  try {
   assertSameOrigin(request);
   const user = await requireUser();
+  await userRateLimit(String(user._id),'removal-request',10,3600);
   const { productId, reason } = deletionSchema.parse(await jsonBody(request));
   const item = await Product.findById(productId);
   if (!item || item.status === 'archived') throw new AppError('Listing not found.', 404);

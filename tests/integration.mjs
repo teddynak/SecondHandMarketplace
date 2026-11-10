@@ -1,3 +1,4 @@
+import {verifyProduction} from './production-integration.mjs';
 import {createServer} from 'node:http';
 import {verifyAccounts,verifyAccountsBrowser} from './account-integration.mjs';
 import assert from 'node:assert/strict';
@@ -19,7 +20,7 @@ await new Promise(resolve=>mailServer.listen(0,'127.0.0.1',resolve));
 const emailApi=`http://127.0.0.1:${mailServer.address().port}/emails`;
 let logs = '';
 const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', '-p', port], {
- env: { ...process.env, EMAIL_PROVIDER:'resend',RESEND_API_KEY:'isolated-email-key',EMAIL_FROM:'ReUse <noreply@example.test>',EMAIL_API_URL:emailApi,APP_URL:origin,MONGODB_URI: uri, AUTH_SECRET: 'isolated-integration-secret-with-at-least-32-characters', NODE_ENV: 'production' },
+ env: { ...process.env, IMAGE_MAX_TOTAL_MB:'8',EMAIL_PROVIDER:'resend',RESEND_API_KEY:'isolated-email-key',EMAIL_FROM:'ReUse <noreply@example.test>',EMAIL_API_URL:emailApi,APP_URL:origin,MONGODB_URI: uri, AUTH_SECRET: 'isolated-integration-secret-with-at-least-32-characters', NODE_ENV: 'production' },
  stdio: ['ignore','pipe','pipe'],
 });
 server.stdout.on('data', data => { logs += data; });
@@ -131,6 +132,7 @@ try {
  const messaging=await verifyMessaging({request,db,seller,other,admin,item,linked});
  await verifyModeration({request,seller,other,admin,linked,messaging,created});
  const security=await verifyAccounts({request,db,mail,seller,other,admin});
+ await verifyProduction({request,db,uri,origin,seller,linked,created});
  console.log('PASS: registration, login, image upload/read, listing CRUD, search, ownership, role upgrade, admin rejection/approval, archived visibility, sales, payment status and profile updates.');
  // A visible item for responsive UI checks.
  await request('/api/items',{method:'POST',cookie:seller,body:{...item,title:'A community desk ready for another story'},status:201});

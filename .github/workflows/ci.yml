@@ -18,6 +18,8 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+        env:
+          APP_URL: http://localhost:3100
       - run: npm run typecheck
       - run: npx playwright install --with-deps chromium
       - name: Verify database CRUD and responsive browser flows

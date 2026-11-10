@@ -1,3 +1,4 @@
+import {userRateLimit} from '@/lib/rate-limit';
 import {NextRequest,NextResponse} from 'next/server';
 import mongoose from 'mongoose';
 import {requireAdmin} from '@/lib/auth';
@@ -20,7 +21,7 @@ export async function GET(request:NextRequest){try{
  const [rows,total]=await Promise.all([EntityReport.find().sort({createdAt:-1,_id:-1}).skip(skip).limit(20).lean(),EntityReport.countDocuments()]);return NextResponse.json({rows:rows.map(r=>({id:String(r._id),title:`${r.kind==='listing'?'Listing':'Member'} report`,detail:`Target ${r.targetId} · Reporter ${r.reporterId}`,targetId:String(r.targetId),kind:r.kind,status:r.status,reason:r.reason,adminNote:r.adminNote})),page,pages:Math.max(1,Math.ceil(total/20))});
 }catch(error){return apiError(error);}}
 export async function PATCH(request:NextRequest){try{
- assertSameOrigin(request);const admin=await requireAdmin();const input=moderationSchema.parse(await jsonBody(request));await AuditEvent.init();await Notification.init();
+ assertSameOrigin(request);const admin=await requireAdmin();await userRateLimit(String(admin._id),'moderation',60);const input=moderationSchema.parse(await jsonBody(request));await AuditEvent.init();await Notification.init();
  await mongoose.connection.transaction(async session=>{let before='',after='',recipient='',href='/dashboard';
   if(input.action==='suspend'||input.action==='restore-account'){
    const user=await User.findById(input.targetId).session(session);if(!user)throw new AppError('Member not found.',404);if(user.role==='admin'||String(user._id)===String(admin._id))throw new AppError('Administrator accounts cannot be suspended here.',403);
@@ -30,7 +31,7 @@ export async function PATCH(request:NextRequest){try{
    const listing=await Product.findById(input.targetId).session(session);if(!listing)throw new AppError('Listing not found.',404);before=listing.moderationHidden?'hidden':'visible';after=input.action==='hide-listing'?'hidden':'visible';if(before===after)throw new AppError('This listing is already in that state.',409);
    recipient=String(listing.sellerId);listing.moderationHidden=after==='hidden';listing.moderationReason=input.reason;await listing.save({session});
   }else{
-   const report=await EntityReport.findOneAndUpdate({_id:input.targetId,status:'pending'},{$set:{status:'reviewed',adminNote:input.reason,reviewedBy:admin._id,reviewedAt:new Date()}},{session,new:true});if(!report)throw new AppError('Report not found or already reviewed.',409);recipient=String(report.reporterId);before='pending';after='reviewed';href='/notifications';
+   const report=await EntityReport.findOneAndUpdate({_id:input.targetId,status:'pending'},{$set:{status:'reviewed',adminNote:input.reason,reviewedBy:admin._id,reviewedAt:new Date()}},{session,returnDocument:'after'});if(!report)throw new AppError('Report not found or already reviewed.',409);recipient=String(report.reporterId);before='pending';after='reviewed';href='/notifications';
   }
   const [event]=await AuditEvent.create([{actorId:admin._id,action:input.action,targetId:input.targetId,reason:input.reason,before,after}],{session});
   await notify(recipient,`moderation:${event._id}`,input.action.replaceAll('-',' '),input.reason,href,'moderation',session);

@@ -244,3 +244,13 @@ The admin dashboard now includes member/listing search, reasoned account suspens
 Open **Account security** from the dashboard to change a password or request email verification. **Forgot your password?** on login starts recovery. Password changes/resets sign out all previous sessions. In-app message/moderation notifications work without an email service.
 
 To enable email links, set `APP_URL` to your canonical HTTPS origin, `EMAIL_PROVIDER=resend`, `RESEND_API_KEY` to a private sending key, and `EMAIL_FROM` to an address at your domain verified in Resend. Configure that domain's DNS in Resend first. The provider's request acceptance is not proof of delivery. Without configuration, the interface reports that email is unavailable. Recovery responses deliberately never confirm account existence or delivery. See [PHASE_4.md](PHASE_4.md) for token rules, rate limits, tests and configuration boundaries. Saved-search email alerts and browser push remain disabled.
+
+## Production preparation
+
+Set `APP_URL` to your canonical HTTPS site origin **before building/redeploying** for metadata and social previews. `/sitemap.xml` contains public used listings and seller pages; private and unavailable pages are excluded/noindex. The current sitemap includes up to 10,000 recent listings. A missing/invalid origin disables crawl discovery instead of publishing a wrong host.
+
+MongoDB-backed rate limits protect authentication, messaging, reporting, listings, uploads and browsing. Configure your hosting proxy to overwrite client IP headers. Security headers and server permissions remain enforced. For large-scale abuse, add hosting/edge controls.
+
+Prototype uploads default to 50 images / 64 MB per account, in addition to 2 MB per image and four photos per listing. Optional overrides are in `.env.example`. Existing assets count toward the limits. Review unused images with `npm run cleanup:images`; it deletes nothing by default. Only `npm run cleanup:images -- --apply` removes unreferenced images older than seven days; referenced sold/archived images remain. No automated schedule is installed. See [PHASE_5.md](PHASE_5.md) for concurrency protection, deployment steps and remaining operational limits.
+
+Completed phase notes: [existing experience](PHASE_1.md), [communication](PHASE_2.md), [moderation](PHASE_3.md), [account security and notifications](PHASE_4.md), and [production preparation](PHASE_5.md). Full checks: `npm run lint`, `npm test`, `npm run build`, `npm run typecheck`, then `npm run test:browser` (isolated test database and mock email only).

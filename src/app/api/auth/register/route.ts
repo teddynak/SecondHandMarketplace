@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import {requestRateLimit} from '@/lib/rate-limit';
 import bcrypt from 'bcryptjs';
 import { connectDb } from '@/lib/db';
 import { apiError, AppError } from '@/lib/errors';
@@ -12,6 +13,7 @@ export async function POST(request: NextRequest) {
   assertSameOrigin(request);
   const details = registerSchema.parse(await jsonBody(request));
   await connectDb();
+  await requestRateLimit(request,'register-ip',20,3600);
   if (await User.exists({ email: details.email })) throw new AppError('An account with this email already exists.', 409);
   const passwordHash = await bcrypt.hash(details.password, 12);
   const user = await User.create({ name: details.name, email: details.email, passwordHash, phone: details.phone, location: details.location, role: 'buyer' });

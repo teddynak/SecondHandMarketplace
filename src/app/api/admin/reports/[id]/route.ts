@@ -14,7 +14,7 @@ export async function PATCH(request:NextRequest,{params}:{params:Promise<{id:str
  const {adminNote}=reviewReportSchema.parse(await jsonBody(request));
  await AuditEvent.init();await Notification.init();
  await mongoose.connection.transaction(async session=>{
-  const report=await Report.findOneAndUpdate({_id:id,status:'pending'},{$set:{status:'reviewed',adminNote,reviewedBy:admin._id,reviewedAt:new Date()}},{new:true,session});
+  const report=await Report.findOneAndUpdate({_id:id,status:'pending'},{$set:{status:'reviewed',adminNote,reviewedBy:admin._id,reviewedAt:new Date()}},{returnDocument:'after',session});
   if(!report)throw new AppError('Report not found or already reviewed.',409);
   const [event]=await AuditEvent.create([{actorId:admin._id,action:'review-conversation-report',targetId:id,reason:adminNote,before:'pending',after:'reviewed'}],{session});
   await notify(String(report.reporterId),`moderation:${event._id}`,'Conversation report reviewed',adminNote,'/notifications','moderation',session);

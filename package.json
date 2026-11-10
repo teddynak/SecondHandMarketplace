@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test tests/*.test.mjs tests/*.test.ts",
+    "cleanup:images": "node --import tsx scripts/cleanup-images.ts",
     "make-admin": "tsx scripts/make-admin.ts",
     "test:integration": "node tests/integration.mjs",
     "test:browser": "BROWSER_CHECKS=1 node tests/integration.mjs",

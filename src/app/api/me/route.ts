@@ -1,3 +1,4 @@
+import {userRateLimit} from '@/lib/rate-limit';
 import { NextRequest, NextResponse } from 'next/server';
 import { currentUser, publicUser, requireUser } from '@/lib/auth';
 import { apiError } from '@/lib/errors';
@@ -13,6 +14,7 @@ export async function PATCH(request: NextRequest) {
  try {
   assertSameOrigin(request);
   const user = await requireUser();
+  await userRateLimit(String(user._id),'profile',30,3600);
   const details = profileSchema.parse(await jsonBody(request));
   user.name = details.name; user.phone = details.phone; user.location = details.location;
   await user.save();

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isStoredImage } from '@/lib/image-source';
+import {attachStoredImages} from '@/lib/image-storage';
+import {userRateLimit,requestRateLimit} from '@/lib/rate-limit';
 import mongoose,{ Types } from 'mongoose';
 import { connectDb } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
@@ -16,6 +18,7 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
  try {
   await connectDb();
+  await requestRateLimit(request,'browse',300);
   const params = request.nextUrl.searchParams;
   const query = (params.get('q') ?? '').trim().slice(0, 100);
   const location = (params.get('location') ?? '').trim().slice(0,80);
@@ -52,6 +55,7 @@ export async function POST(request: NextRequest) {
   assertSameOrigin(request);
   const user = await requireUser();
   const body = productSchema.parse(await jsonBody(request));
+  await userRateLimit(String(user._id),'create-listing',20,3600);
   if (body.images.length) {
    const ids = body.images.filter(isStoredImage).map(path => new Types.ObjectId(path.split('/').pop()));
    const count = await ImageAsset.countDocuments({ _id: { $in: ids }, ownerId: user._id });
@@ -59,8 +63,9 @@ export async function POST(request: NextRequest) {
   }
   await Product.init();
   const product=await mongoose.connection.transaction(async session=>{
-   const member=await User.findOneAndUpdate({_id:user._id,accountStatus:{$ne:'suspended'}},{$inc:{activityVersion:1}},{new:true,session});
+   const member=await User.findOneAndUpdate({_id:user._id,accountStatus:{$ne:'suspended'}},{$inc:{activityVersion:1}},{returnDocument:'after',session});
    if(!member)throw new AppError('Your account is suspended.',403);
+   await attachStoredImages(body.images,String(member._id),session);
    const [created]=await Product.create([{...body,sellerId:member._id,sellerName:member.name,sellerEmail:member.email,status:'available',paymentStatus:'unpaid'}],{session});
    if(member.role==='buyer')await User.updateOne({_id:member._id,role:'buyer'},{$set:{role:'seller'}},{session});
    return created;
