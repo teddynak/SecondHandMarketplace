@@ -254,3 +254,6 @@ MongoDB-backed rate limits protect authentication, messaging, reporting, listing
 Prototype uploads default to 50 images / 64 MB per account, in addition to 2 MB per image and four photos per listing. Optional overrides are in `.env.example`. Existing assets count toward the limits. Review unused images with `npm run cleanup:images`; it deletes nothing by default. Only `npm run cleanup:images -- --apply` removes unreferenced images older than seven days; referenced sold/archived images remain. No automated schedule is installed. See [PHASE_5.md](PHASE_5.md) for concurrency protection, deployment steps and remaining operational limits.
 
 Completed phase notes: [existing experience](PHASE_1.md), [communication](PHASE_2.md), [moderation](PHASE_3.md), [account security and notifications](PHASE_4.md), and [production preparation](PHASE_5.md). Full checks: `npm run lint`, `npm test`, `npm run build`, `npm run typecheck`, then `npm run test:browser` (isolated test database and mock email only).
+
+
+Dependency review: the production-only audit reports zero advisories; seven moderate development-only TypeScript ESLint/minimatch entries remain pending a compatible upstream tooling release. See PHASE_5.md for the advisory and review details.

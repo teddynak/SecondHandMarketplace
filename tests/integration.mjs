@@ -334,7 +334,7 @@ try {
   await requestRow.locator('.badge-approved').waitFor();
   for(const width of widths){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Admin overflow at ${width}px`);}
   await verifyMessagingBrowser({page,context,origin,request,db,seller,other,admin,linked,messaging,capture});
-  await verifyModerationBrowser({page,context,origin,admin,other,linked,sellerId:messaging.sellerId,capture});
+  await verifyModerationBrowser({page,context,origin,admin,other,seller,linked,sellerId:messaging.sellerId,capture});
   await verifyAccountsBrowser({page,context,origin,mail,security,capture,seller});
   console.log('PASS: browser forms create, read, edit, request removal and admin archive.');
   console.log('PASS: responsive overflow checks at 320, 375, 768, 1024, 1440 and 1920px; mobile menu/filters and profile form interactions.');
