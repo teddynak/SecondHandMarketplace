@@ -169,6 +169,13 @@ try {
       return art.left<title.right && art.right>title.left && art.top<title.bottom && art.bottom>title.top;
      }));
      assert.equal(overlap,false,`Category artwork overlaps labels at ${width}px`);
+     assert.equal(await page.locator('.category-card').count(),7);
+     assert.equal(await page.locator('.category-card img:not([alt=""])').count(),0,'Category images must not duplicate the link name');
+     const firstCategory=page.locator('.category-card').first();
+     if(await firstCategory.locator('img').count())await firstCategory.locator('img').evaluate(image=>image.dispatchEvent(new Event('error')));
+     await page.waitForTimeout(50);
+     assert.equal(await firstCategory.locator('img').count(),0,'Broken category photo should be removed');
+     assert.ok(await firstCategory.locator('.category-icon').isVisible(),'Icon fallback must remain visible');
     }
    }
   }

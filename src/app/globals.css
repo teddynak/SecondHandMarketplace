@@ -161,3 +161,17 @@ body{background:var(--paper)}.site-header{position:sticky;top:0;box-shadow:0 2px
 @media(max-width:720px){.help-hero,.about-hero{padding:34px 0}.help-hero h1,.about-hero h1{font-size:36px}.help-hero p,.about-hero>.container>p{font-size:14px}.help-content,.about-content{padding-block:24px 40px}.help-topics{gap:7px}.help-topics button{padding:9px 12px;font-size:11px}.help-results-heading{align-items:start;flex-direction:column;gap:7px}.help-article summary{padding:16px;font-size:13px}.help-answer{padding:0 16px 18px}.help-answer p{font-size:13px}.help-bottom{align-items:start;flex-wrap:wrap;padding:22px}.help-bottom>div{min-width:200px}.help-bottom>.btn{width:100%}.about-story{grid-template-columns:1fr;gap:20px;padding-bottom:28px}.about-story h2,.about-rules h2{font-size:28px}.about-mission{padding:24px}.about-mission>h2{font-size:29px}.about-mission>p{font-size:14px}.about-values{grid-template-columns:1fr;gap:14px}.about-rules{grid-template-columns:1fr;gap:24px;padding-top:28px}.about-closing{align-items:start;flex-wrap:wrap}.about-closing>div{min-width:200px}.about-closing>.btn{width:100%}.about-closing h2{font-size:23px}.help-search{padding:7px 10px;gap:8px}.help-search input{font-size:14px}.about-anchors a{font-size:11px;padding:9px 12px}}
 
 .save-heart{width:44px;height:44px}.save-heart svg{width:17px;height:17px}
+
+/* Category photography stays separate from the compact, seller-owned listing cards. */
+.discovery-categories .category-card{padding:0 0 16px;gap:0;min-height:0;justify-content:flex-start}
+.discovery-categories .category-art{position:relative;top:auto;right:auto;width:100%;height:auto;aspect-ratio:3/2;border-radius:0;overflow:hidden;flex-shrink:0;display:grid;place-items:center;transform:none}
+.discovery-categories .category-photo{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .2s}
+.discovery-categories .category-card:hover .category-photo{transform:scale(1.04)}
+.discovery-categories .category-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:#fff;color:#7946bf}
+.discovery-categories .category-art:has(.category-photo) .category-icon{position:absolute;bottom:8px;left:8px;width:31px;height:31px;border-radius:9px;box-shadow:0 2px 8px #26173815}
+.discovery-categories .category-art:has(.category-photo) .category-icon svg{width:19px;height:19px}
+.discovery-categories .category-card>div:not(.category-art){padding:14px 27px 0 12px}
+.discovery-categories .category-card h3{margin-top:0}
+.discovery-categories .category-card p{margin-top:5px}
+@media(max-width:720px){.discovery-categories .category-card{padding:0 0 14px;flex-basis:148px}.discovery-categories .category-art{width:100%;height:auto}.discovery-categories .category-card>div:not(.category-art){padding-top:12px}}
+@media(prefers-reduced-motion:reduce){.discovery-categories .category-photo{transition:none}.discovery-categories .category-card:hover .category-photo{transform:none}}
