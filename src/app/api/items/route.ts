@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isStoredImage } from '@/lib/image-source';
-import { Types } from 'mongoose';
+import mongoose,{ Types } from 'mongoose';
 import { connectDb } from '@/lib/db';
 import { requireUser } from '@/lib/auth';
 import { apiError, AppError } from '@/lib/errors';
@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, Math.min(1000, Number.parseInt(params.get('page') ?? '1', 10) || 1));
   const limit = Math.max(1, Math.min(24, Number.parseInt(params.get('limit') ?? '12', 10) || 12));
   const sort = params.get('sort') ?? 'newest';
-  const filter: Record<string, unknown> = { status: 'available', condition: { $ne: 'New' } };
+  const filter: Record<string, unknown> = { status: 'available', condition: { $ne: 'New' },moderationHidden:{$ne:true},sellerSuspended:{$ne:true} };
   if (query) {
    const safe = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
    filter.$or = [{ title: { $regex: safe, $options: 'i' } }, { description: { $regex: safe, $options: 'i' } }, { location: { $regex: safe, $options: 'i' } }];
@@ -57,11 +57,14 @@ export async function POST(request: NextRequest) {
    const count = await ImageAsset.countDocuments({ _id: { $in: ids }, ownerId: user._id });
    if (count !== new Set(ids.map(String)).size) throw new AppError('One or more uploaded images do not belong to your account.', 403);
   }
-  const product = await Product.create({ ...body, sellerId: user._id, sellerName: user.name, sellerEmail: user.email, status: 'available', paymentStatus: 'unpaid' });
-  if (user.role === 'buyer') {
-   user.role = 'seller';
-   await User.updateOne({ _id: user._id, role: 'buyer' }, { $set: { role: 'seller' } });
-  }
+  await Product.init();
+  const product=await mongoose.connection.transaction(async session=>{
+   const member=await User.findOneAndUpdate({_id:user._id,accountStatus:{$ne:'suspended'}},{$inc:{activityVersion:1}},{new:true,session});
+   if(!member)throw new AppError('Your account is suspended.',403);
+   const [created]=await Product.create([{...body,sellerId:member._id,sellerName:member.name,sellerEmail:member.email,status:'available',paymentStatus:'unpaid'}],{session});
+   if(member.role==='buyer')await User.updateOne({_id:member._id,role:'buyer'},{$set:{role:'seller'}},{session});
+   return created;
+  });
   return NextResponse.json({ item: productDto(product) }, { status: 201 });
  } catch (error) { return apiError(error); }
 }

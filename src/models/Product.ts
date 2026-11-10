@@ -1,12 +1,14 @@
 import mongoose, { Schema, models, model, Types } from 'mongoose';
 import { CATEGORIES } from '@/types';
 export interface IProduct {
+ moderationHidden:boolean;moderationReason:string;sellerSuspended:boolean;
  title: string; description: string; category: string; price: number; condition: string;
  images: string[]; sellerId: Types.ObjectId; sellerName: string; sellerEmail: string;
  sellerPhone: string; location: string; status: 'available'|'sold'|'archived';
  paymentStatus: 'unpaid'|'paid'; createdAt: Date; updatedAt: Date;
 }
 const ProductSchema = new Schema<IProduct>({
+ moderationHidden:{type:Boolean,default:false},moderationReason:{type:String,default:''},sellerSuspended:{type:Boolean,default:false},
  title: { type: String, required: true, trim: true }, description: { type: String, required: true },
  category: { type: String, enum: CATEGORIES, required: true }, price: { type: Number, min: 1, required: true },
  condition: { type: String, enum: ['Used','New','Like new','Good','Fair'], default: 'Used', required: true },

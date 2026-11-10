@@ -13,8 +13,8 @@ function secret() {
  if (!value || value.length < 32 || value.startsWith('REPLACE_WITH')) throw new AppError('Authentication is not configured. Set AUTH_SECRET in .env.local.', 503);
  return new TextEncoder().encode(value);
 }
-export function publicUser(user: { _id: unknown; name: string; email: string; phone: string; location: string; role: 'buyer'|'seller'|'admin'; createdAt: Date }): PublicUser {
- return { id: String(user._id), name: user.name, email: user.email, phone: user.phone, location: user.location, role: user.role, createdAt: user.createdAt.toISOString() };
+export function publicUser(user: { _id: unknown; name: string; email: string; phone: string; location: string; role: 'buyer'|'seller'|'admin'; createdAt: Date;accountStatus?:'active'|'suspended';suspensionReason?:string }): PublicUser {
+ return { accountStatus:user.accountStatus??'active',suspensionReason:user.suspensionReason??'',id: String(user._id), name: user.name, email: user.email, phone: user.phone, location: user.location, role: user.role, createdAt: user.createdAt.toISOString() };
 }
 export async function signIn(response: NextResponse, userId: string) {
  const token = await new SignJWT({}).setProtectedHeader({ alg: 'HS256' }).setSubject(userId)
@@ -44,6 +44,7 @@ export async function currentUser() {
 export async function requireUser() {
  const user = await currentUser();
  if (!user) throw new AppError('Please log in to continue.', 401);
+ if(user.accountStatus==='suspended')throw new AppError(`Your account is suspended. Reason: ${user.suspensionReason||'Please contact the administrator.'}`,403);
  return user;
 }
 export async function requireAdmin() {

@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
   await connectDb();
   const user = await User.findOne({ email }).select('+passwordHash');
   if (!user || !(await bcrypt.compare(password, user.passwordHash))) throw new AppError('Invalid email or password.', 401);
+  if(user.accountStatus==='suspended')throw new AppError(`Your account is suspended. Reason: ${user.suspensionReason}`,403);
   return await signIn(NextResponse.json({ user: publicUser(user) }), String(user._id));
  } catch (error) { return apiError(error); }
 }

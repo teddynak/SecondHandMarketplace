@@ -1,5 +1,7 @@
 import type { Product } from '@/types';
-export function listingStatusDescription(item:Pick<Product,'status'|'paymentStatus'|'deletionRequestStatus'|'usedOnlyEligible'>){
+export function listingStatusDescription(item:Pick<Product,'status'|'paymentStatus'|'deletionRequestStatus'|'usedOnlyEligible'|'moderationHidden'|'moderationReason'|'sellerSuspended'>){
+ if(item.sellerSuspended)return 'Hidden while your account is suspended. Account restoration does not change sold or archived status.';
+ if(item.moderationHidden)return `Hidden by an administrator. Reason: ${item.moderationReason||'Under moderation review.'} Editing does not restore public visibility.`;
  if(item.usedOnlyEligible===false&&item.status==='available')return 'Hidden from buyers because this older listing was marked new. Only used items are accepted. Edit and relist only after the item has been used.';
  if(item.status==='archived')return 'Archived after administrator approval. This listing is hidden from buyers and can no longer be edited.';
  if(item.status==='sold')return `Sold listings are hidden from buyers and cannot be edited. ${item.paymentStatus==='paid'?'Payment is recorded as received.':'You can mark payment received once the buyer has paid.'}${item.deletionRequestStatus==='pending'?' A removal request is awaiting administrator review.':''}`;

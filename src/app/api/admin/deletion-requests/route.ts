@@ -11,7 +11,7 @@ export async function GET() {
   await requireAdmin();
   const [requests, productsCount, soldCount, usersCount, pendingCount] = await Promise.all([
    DeletionRequest.find().sort({ createdAt: -1 }).limit(150).lean(),
-   Product.countDocuments({ status: 'available', condition: { $ne: 'New' } }),
+   Product.countDocuments({ status: 'available', condition: { $ne: 'New' },moderationHidden:{$ne:true},sellerSuspended:{$ne:true} }),
    Product.countDocuments({ status: 'sold' }),
    User.countDocuments(),
    DeletionRequest.countDocuments({ status: 'pending' })

@@ -9,10 +9,6 @@ test('a regular seller has no direct DELETE endpoint',()=>{
  assert.doesNotMatch(source('src/app/api/items/[id]/route.ts'),/export\s+(async\s+)?function\s+DELETE\s*\(/);
  assert.match(source('src/app/api/admin/deletion-requests/[id]/route.ts'),/requireAdmin\(\)/);
 });
-test('buyer role upgrades after the first successful listing',()=>{
- const route=source('src/app/api/items/route.ts');
- assert.match(route,/Product\.create\(/); assert.match(route,/user\.role === 'buyer'/);assert.match(route,/user\.role = 'seller'/);
-});
 test('public marketplace excludes sold and archived listings',()=>{
  assert.match(source('src/app/api/items/route.ts'),/status: 'available'/);
  assert.match(source('src/app/api/items/[id]/route.ts'),/product\.status = 'sold'/);

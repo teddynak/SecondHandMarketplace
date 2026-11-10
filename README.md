@@ -234,3 +234,7 @@ Cards are compact: the homepage shows six columns at desktop widths and seven on
 Use **Message on ReUse** from an available listing, then find replies in **Inbox**. Conversations and plain-text messages are stored in MongoDB and restricted to their buyer and seller. Blocking, conversation reporting and an administrator report-review queue are included. WhatsApp and phone contact remain available. Sold and archived listing conversations keep their history but become read-only.
 
 No new environment variables are required. Use Atlas or a MongoDB replica set, with permission to create the additive collections and unique indexes. See [PHASE_2.md](PHASE_2.md) for polling intervals, message/report limits, privacy boundaries and tests. In-app messaging does not send email or browser push notifications.
+
+## Administration and moderation
+
+The admin dashboard now includes member/listing search, reasoned account suspension/restoration, listing moderation holds, listing/member reports, conversation evidence review and an audit history. Confirmation dialogs protect sensitive decisions. Restoring an account or visibility does not reset sold, archived or other moderation states. See [PHASE_3.md](PHASE_3.md). Existing records are preserved; no new environment variables are needed.

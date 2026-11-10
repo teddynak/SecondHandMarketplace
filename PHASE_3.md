@@ -1,0 +1,13 @@
+# Phase 3 — Administration and moderation
+
+Admin-only community moderation now includes paginated/searchable members and listings, listing/member reports, confirmation dialogs and an append-only API audit history. Conversation reports remain in their own evidence queue; admin status alone never allows opening a private thread.
+
+Suspending a non-admin account requires a reason, blocks protected API access and future login, and transactionally hides all owned listings. Existing sessions can see their suspension reason through their own profile, but protected actions are rejected on the server. Account restoration preserves sold, archived and separately moderated states. Admin accounts cannot be suspended through this interface. No account deletion, role changes or password exposure are added.
+
+Admins can hide/restore a listing's moderation visibility independently of seller-requested removal. Owners see the reason. Editing cannot clear a moderation hold. Hidden and suspended-seller listings are excluded from public browsing, detail access, favourites, seller inventory, new conversations and message sends. Owners/admins retain listing records. Sellers continue to request removal; admin-approved requests archive listings through the existing transaction. Approval/rejection now requires explicit confirmation in the UI.
+
+Listing and member reports require sign-in and a detailed reason, deduplicate pending reports, and are limited to five submissions per member per hour. Review records an outcome; it does not silently suspend a member or remove a listing. Admin decisions, conversation-report reviews and seller-removal reviews write an audit event in the same transaction as the decision, with actor, target, reason and before/after state. There is no audit-edit/delete endpoint.
+
+No new environment variables or reset. New flags default to permissive existing behaviour; all new storage is additive. Atlas/replica-set support and collection/index creation permissions are required. Listing creation now uses a transaction and a write to the owner's account to prevent concurrent suspension from leaving a newly created visible listing behind.
+
+Tests cover permissions, self/admin protection, hidden visibility, rejected forged moderation edits, suspension enforcement on existing sessions and login, account restoration preserving archived/hidden records, entity reports, audit events, confirmations, browser reporting and six viewport widths. Ordinary requests already in flight when a moderation decision commits may finish. Broader account security and notification delivery follow in the next phase.

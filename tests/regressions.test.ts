@@ -85,3 +85,13 @@ test('messages require text and a stable UUID and bound report evidence input',a
  assert.equal(reportConversationSchema.safeParse({conversationId:'invalid',reason:'A detailed report reason'}).success,false);
  for(const through of [-1,0,1.5,Infinity])assert.equal(readMessagesSchema.safeParse({through}).success,false);
 });
+
+
+test('moderation decisions require a target, known action and a real reason',async()=>{
+ const {moderationSchema,entityReportSchema}=await import('../src/lib/moderation-validation');
+ const targetId='0123456789abcdef01234567';
+ assert.equal(moderationSchema.safeParse({action:'suspend',targetId,reason:'Account review found an issue.'}).success,true);
+ assert.equal(moderationSchema.safeParse({action:'delete-everything',targetId,reason:'Account review found an issue.'}).success,false);
+ assert.equal(moderationSchema.safeParse({action:'suspend',targetId,reason:'Short'}).success,false);
+ assert.equal(entityReportSchema.safeParse({kind:'user',targetId,reason:'A clear report for an administrator.'}).success,true);
+});

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {verifyModeration,verifyModerationBrowser} from './moderation-integration.mjs';
 import {verifyMessaging,verifyMessagingBrowser} from './messaging-integration.mjs';
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
@@ -122,6 +123,7 @@ try {
  await request('/api/items',{method:'POST',cookie:seller,body:{...item,images:['javascript:alert(1)']},status:400});
  console.log('PASS: linked and uploaded images work together, unsafe links and unauthorized edits are rejected.');
  const messaging=await verifyMessaging({request,db,seller,other,admin,item,linked});
+ await verifyModeration({request,seller,other,admin,linked,messaging,created});
  console.log('PASS: registration, login, image upload/read, listing CRUD, search, ownership, role upgrade, admin rejection/approval, archived visibility, sales, payment status and profile updates.');
  // A visible item for responsive UI checks.
  await request('/api/items',{method:'POST',cookie:seller,body:{...item,title:'A community desk ready for another story'},status:201});
@@ -319,9 +321,11 @@ try {
   await page.goto(origin+'/admin');
   const requestRow=page.locator('.request-card').filter({hasText:'Browser updated chair'});
   await requestRow.getByRole('button',{name:'Approve & archive'}).click();
+  await page.getByRole('dialog').getByRole('button',{name:'Confirm removal decision',exact:true}).click();
   await requestRow.locator('.badge-approved').waitFor();
   for(const width of widths){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Admin overflow at ${width}px`);}
   await verifyMessagingBrowser({page,context,origin,request,db,seller,other,admin,linked,messaging,capture});
+  await verifyModerationBrowser({page,context,origin,admin,other,linked,sellerId:messaging.sellerId,capture});
   console.log('PASS: browser forms create, read, edit, request removal and admin archive.');
   console.log('PASS: responsive overflow checks at 320, 375, 768, 1024, 1440 and 1920px; mobile menu/filters and profile form interactions.');
   if(process.env.SCREENSHOT_DIR) {

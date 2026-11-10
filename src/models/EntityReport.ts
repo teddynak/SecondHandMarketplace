@@ -1,0 +1,4 @@
+import mongoose,{Schema,models,model,Types} from 'mongoose';
+export interface IEntityReport {reporterId:Types.ObjectId;kind:'listing'|'user';targetId:Types.ObjectId;reason:string;status:'pending'|'reviewed';adminNote:string;reviewedBy?:Types.ObjectId;reviewedAt?:Date;createdAt:Date}
+const schema=new Schema<IEntityReport>({reporterId:{type:Schema.Types.ObjectId,required:true},kind:{type:String,enum:['listing','user'],required:true},targetId:{type:Schema.Types.ObjectId,required:true},reason:{type:String,required:true,maxlength:1000},status:{type:String,enum:['pending','reviewed'],default:'pending'},adminNote:{type:String,default:''},reviewedBy:Schema.Types.ObjectId,reviewedAt:Date},{timestamps:true});schema.index({reporterId:1,kind:1,targetId:1},{unique:true,partialFilterExpression:{status:'pending'}});schema.index({createdAt:-1,_id:-1});
+export default (models.EntityReport as mongoose.Model<IEntityReport>)||model<IEntityReport>('EntityReport',schema);

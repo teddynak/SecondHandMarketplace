@@ -20,10 +20,10 @@ export async function GET(request:NextRequest){try{
 export async function POST(request:NextRequest){try{
  assertSameOrigin(request);const user=await requireUser();const userId=String(user._id);
  const {listingId}=startConversationSchema.parse(await jsonBody(request));
- const listing=await Product.findOne({_id:listingId,status:'available',condition:{$ne:'New'}});
+ const listing=await Product.findOne({_id:listingId,status:'available',condition:{$ne:'New'},moderationHidden:{$ne:true},sellerSuspended:{$ne:true}});
  if(!listing)throw new AppError('This listing is no longer available for a new conversation.',404);
  if(String(listing.sellerId)===userId)throw new AppError('You cannot contact yourself about your own listing. View your inbox for buyer messages.',400);
- if(!await User.exists({_id:listing.sellerId}))throw new AppError('This seller is no longer available.',404);
+ if(!await User.exists({_id:listing.sellerId,accountStatus:{$ne:'suspended'}}))throw new AppError('This seller is no longer available.',404);
  if((await blockState(userId,String(listing.sellerId))).blocked)throw new AppError('You cannot start a conversation while a block is in place.',403);
  await userRateLimit(userId,'start-conversation',10);
  await Conversation.init();
